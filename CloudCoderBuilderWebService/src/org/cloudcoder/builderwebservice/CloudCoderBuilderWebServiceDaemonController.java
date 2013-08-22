@@ -16,33 +16,39 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org.cloudcoder.webservice.util;
+package org.cloudcoder.builderwebservice;
+
+import org.cloudcoder.daemon.DaemonController;
+import org.cloudcoder.daemon.IDaemon;
 
 /**
- * Exception type indicating that the client's request was invalid,
- * and that the web service should respond with a 400 status code.
+ * {@link DaemonController} implementation for {@link CloudCoderBuilderWebServiceDaemon}.
+ * Contains the main entry point for the deployable jarfile.
  * 
  * @author David Hovemeyer
  */
-public class BadRequestException extends Exception {
-	private static final long serialVersionUID = 1L;
-	
-	/**
-	 * Constructor.
-	 * 
-	 * @param msg reason for the exception
-	 */
-	public BadRequestException(String msg) {
-		super(msg);
+public class CloudCoderBuilderWebServiceDaemonController extends DaemonController {
+	@Override
+	public String getDefaultInstanceName() {
+		return "instance";
 	}
 
-	/**
-	 * Constructor.
-	 * 
-	 * @param msg reason for the exception 
-	 * @param e cause of the exception
-	 */
-	public BadRequestException(String msg, Throwable e) {
-		super(msg, e);
+	@Override
+	public Class<? extends IDaemon> getDaemonClass() {
+		return CloudCoderBuilderWebServiceDaemon.class;
+	}
+	
+	@Override
+	protected Options createOptions() {
+		return new Options() {
+			@Override
+			public String getStdoutLogFileName() {
+				return "logs/stdout.log";
+			}
+		};
+	}
+
+	public static void main(String[] args) {
+		new CloudCoderBuilderWebServiceDaemonController().exec(args);
 	}
 }
