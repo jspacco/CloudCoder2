@@ -1,7 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
 // Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
-// Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -16,32 +15,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org.cloudcoder.app.shared.model;
+package org.cloudcoder.app.server.login;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
- * Enumeration describing the outcome of an attempt to compile a submission.
+ * Abstract base class for {@link ILoginProvider} implementations that
+ * do require username and password, and do not support preauthorized
+ * logins.
  * 
- * @author Jaime Spacco
  * @author David Hovemeyer
  */
-public enum CompilationOutcome {
-	/**
-	 * Successful compilation.
-	 */
-    SUCCESS,
-    
-    /**
-     * Unsuccessful compilation (for example, a syntax error prevented compilation).
-     */
-    FAILURE, 
-    
-    /**
-     * Some type of unexpected compiler error occurred.
-     */
-    UNEXPECTED_COMPILER_ERROR,
-    
-    /**
-     * An internal error (i.e., bug) in the builder prevented successful compilation.
-     */
-    BUILDER_ERROR,
+public abstract class AbstractLoginProvider implements ILoginProvider {
+	
+	@Override
+	public boolean isUsernamePasswordRequired() {
+		return true;
+	}
+	
+	@Override
+	public String getPreAuthorizedUsername(HttpServletRequest request) {
+		throw new IllegalStateException("Preauthorized username not supported by " + DatabaseLoginProvider.class.getSimpleName());
+	}
+
 }

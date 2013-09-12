@@ -14,7 +14,8 @@
 	</target>
 	
 	<target name="build" depends="init">
-		<javac source="1.6" target="1.6" srcdir="src" destdir="bin"/>
+		<mkdir dir="bin"/>
+		<javac source="1.6" target="1.6" debug="true" srcdir="src" destdir="bin"/>
 	</target>
 	
 	<target name="jar" depends="build">

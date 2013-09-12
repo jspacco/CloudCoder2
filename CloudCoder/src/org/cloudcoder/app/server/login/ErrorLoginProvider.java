@@ -16,32 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org.cloudcoder.app.shared.model;
+package org.cloudcoder.app.server.login;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.cloudcoder.app.server.persist.PersistenceException;
+import org.cloudcoder.app.shared.model.User;
 
 /**
- * Enumeration describing the outcome of an attempt to compile a submission.
+ * Implementation of {@link ILoginProvider} that always throws
+ * an exception.  This provider is used only if the cloudcoder
+ * configuration does not specify a valid provider type.
  * 
- * @author Jaime Spacco
  * @author David Hovemeyer
  */
-public enum CompilationOutcome {
-	/**
-	 * Successful compilation.
-	 */
-    SUCCESS,
-    
-    /**
-     * Unsuccessful compilation (for example, a syntax error prevented compilation).
-     */
-    FAILURE, 
-    
-    /**
-     * Some type of unexpected compiler error occurred.
-     */
-    UNEXPECTED_COMPILER_ERROR,
-    
-    /**
-     * An internal error (i.e., bug) in the builder prevented successful compilation.
-     */
-    BUILDER_ERROR,
+public class ErrorLoginProvider extends AbstractLoginProvider {
+
+	@Override
+	public User login(String username, String password, HttpServletRequest request) {
+		throw new PersistenceException("No login provider is configured");
+	}
+
 }
