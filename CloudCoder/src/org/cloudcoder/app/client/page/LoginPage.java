@@ -18,6 +18,7 @@
 
 package org.cloudcoder.app.client.page;
 
+import org.cloudcoder.app.client.CloudCoder;
 import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
@@ -30,8 +31,10 @@ import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.InlineLabel;
@@ -117,13 +120,12 @@ public class LoginPage extends CloudCoderPage {
 					// For whatever reason, activating the login view (which will
 					// probably set the focus of a UI component, e.g. the username
 					// textbox) doesn't seem to work if done synchronously.
-					// Doing it after a brief delay seems to work.
-					new Timer() {
+					Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
 						@Override
-						public void run() {
+						public void execute() {
 							loginView.activate();
 						}
-					}.schedule(20);
+					});
 				}
 			});
 		}
@@ -153,7 +155,12 @@ public class LoginPage extends CloudCoderPage {
 						// Successful login!
 						getSession().add(loginSpec);
 						getSession().add(result);
-						getSession().get(PageStack.class).push(PageId.COURSES_AND_PROBLEMS);
+						
+						// Create and activate whatever initial page and page stack
+						// is appropriate, using the link page id and page params.
+						// This allows us to navigate to, e.g., the development page
+						// if that was specified in the original URL.
+						CloudCoder.getInstance().createPostLoginPage(linkPageId, linkPageParams);
 					}
 				}
 			});
@@ -164,33 +171,53 @@ public class LoginPage extends CloudCoderPage {
 		}
 	}
 
-	private UI ui;
+	private PageId linkPageId;
+	private String linkPageParams;
+	
+	/**
+	 * Default constructor.
+	 * Will take the user to the {@link CoursesAndProblemsPage2}
+	 * upon a successful login.
+	 */
+	public LoginPage() {
+		GWT.log("Creating LoginPage, fragment is " + Window.Location.getHash());
+		linkPageId = PageId.COURSES_AND_PROBLEMS;
+		linkPageParams = "";
+	}
+	
+	/**
+	 * Set the {@link PageId} that was specified in the original URL.
+	 * The login page should try to navigate to it on a successful login.
+	 * 
+	 * @param linkPageId the linkPageId to set
+	 */
+	public void setLinkPageId(PageId linkPageId) {
+		this.linkPageId = linkPageId;
+	}
+	
+	/**
+	 * Set the page parameters that were specified in the original URL.
+	 * 
+	 * @param linkPageParams the linkPageParams to set
+	 */
+	public void setLinkPageParams(String linkPageParams) {
+		this.linkPageParams = linkPageParams;
+	}
 
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		// This page does not require any page objects
+		return new Class<?>[0];
 	}
 	
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	@Override
-	public void deactivate() {
-	}
-
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-	 */
-	@Override
-	public boolean isActivity() {
-		return false;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 	
 	@Override

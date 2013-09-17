@@ -77,11 +77,6 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 		private static final double LOAD_PROBLEM_BUTTON_WIDTH_PX = 160.0;
 
 		/**
-		 * Width of the course and user admin buttons.
-		 */
-		public static final double COURSE_AND_USER_ADMIN_BUTTON_WIDTH_PX = 70.0;
-
-		/**
 		 * Height of the course and user admin buttons.
 		 */
 		private static final double COURSE_AND_USER_ADMIN_BUTTON_HEIGHT_PX = 27.0;
@@ -426,14 +421,19 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 		}
 	}
 
-	private UI ui;
-
 	/* (non-Javadoc)
 	 * @see org.cloudcoder.app.client.page.CloudCoderPage#createWidget()
 	 */
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		// This page does not require any page objects other than the
+		// ones that are added automatically when the user logs in.
+		return new Class<?>[0];
 	}
 
 	/* (non-Javadoc)
@@ -442,31 +442,7 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 	@Override
 	public void activate() {
 		getSession().add(new ProblemAndSubmissionReceipt[0]);
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#deactivate()
-	 */
-	@Override
-	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#getWidget()
-	 */
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-	 */
-	@Override
-	public boolean isActivity() {
-		return true;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 
 	@Override

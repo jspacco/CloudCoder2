@@ -25,6 +25,7 @@ import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.client.view.PageNavPanel;
 import org.cloudcoder.app.client.view.StatusMessageView;
 import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.Quiz;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
@@ -282,32 +283,27 @@ public class QuizPage extends CloudCoderPage {
 		}
 	}
 
-	private UI ui;
-
 	@Override
 	public void createWidget() {
-		this.ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{ CourseSelection.class, Problem.class };
 	}
 
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 
 	@Override
 	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-		ui.deactivate();
-	}
-
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	@Override
-	public boolean isActivity() {
-		return true;
+		super.deactivate();
+		if (getWidget() instanceof UI) {
+			((UI)getWidget()).deactivate();
+		}
 	}
 
 	@Override

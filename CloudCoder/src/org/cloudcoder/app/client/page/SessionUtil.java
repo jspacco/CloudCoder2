@@ -22,8 +22,15 @@ import org.cloudcoder.app.client.model.StatusMessage;
 import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.Course;
+import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
+import org.cloudcoder.app.shared.model.CourseSelection;
+import org.cloudcoder.app.shared.model.ICallback;
 import org.cloudcoder.app.shared.model.Module;
+import org.cloudcoder.app.shared.model.Pair;
+import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemAndSubmissionReceipt;
+import org.cloudcoder.app.shared.model.ProblemAndTestCaseList;
+import org.cloudcoder.app.shared.model.TestCase;
 import org.cloudcoder.app.shared.model.User;
 
 import com.google.gwt.core.client.GWT;
@@ -67,5 +74,115 @@ public class SessionUtil {
             }
         });
 		
+	}
+
+	/**
+	 * Load a complete {@link ProblemAndTestCaseList} for given {@link Problem}.
+	 * An RPC call is made to fetch the {@link TestCase}s for the problem,
+	 * and the result is delivered asynchronously to a callback.
+	 *
+	 * @param page       the {@link CloudCoderPage} (needed if a session timeout occurs)
+	 * @param problem    the problem
+	 * @param onSuccess  the callback to receive the full {@link ProblemAndTestCaseList}
+	 * @param onFailure  callback invoked if the {@link ProblemAndTestCaseList} can't be loaded
+	 */
+	public static void loadProblemAndTestCaseList(
+			final CloudCoderPage page,
+			final Problem problem,
+			final ICallback<ProblemAndTestCaseList> onSuccess,
+			final ICallback<Pair<String, Throwable>> onFailure) {
+		RPC.getCoursesAndProblemsService.getTestCasesForProblem(problem.getProblemId(), new AsyncCallback<TestCase[]>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				if (caught instanceof CloudCoderAuthenticationException) {
+					page.recoverFromServerSessionTimeout(new Runnable() {
+						public void run() {
+							// Try again!
+							loadProblemAndTestCaseList(page, problem, onSuccess, onFailure);
+						}
+					});
+				} else {
+					//page.getSession().add(StatusMessage.error("Could not load test cases for problem: " + caught.getMessage()));
+					onFailure.call(new Pair<String, Throwable>("Could not load test cases for problem", caught));
+				}
+			}
+
+			@Override
+			public void onSuccess(TestCase[] result) {
+				// Success!
+				ProblemAndTestCaseList problemAndTestCaseList = new ProblemAndTestCaseList();
+				problemAndTestCaseList.setProblem(problem);
+				problemAndTestCaseList.setTestCaseList(result);
+				onSuccess.call(problemAndTestCaseList);
+			}
+		});
+	}
+
+	/**
+	 * Load the list of CourseAndCourseRegistrations for the logged-in user.
+	 * 
+	 * @param page       the {@link CloudCoderPage}
+	 * @param onSuccess  success callback
+	 * @param onFailure  failure callback
+	 */
+	public static void loadCourseAndCourseRegistrationList(
+			final CloudCoderPage page,
+			final ICallback<CourseAndCourseRegistration[]> onSuccess,
+			final ICallback<Pair<String, Throwable>> onFailure) {
+		RPC.getCoursesAndProblemsService.getCourseAndCourseRegistrations(new AsyncCallback<CourseAndCourseRegistration[]>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				if (caught instanceof CloudCoderAuthenticationException) {
+					page.recoverFromServerSessionTimeout(new Runnable(){
+						@Override
+						public void run() {
+							loadCourseAndCourseRegistrationList(page, onSuccess, onFailure);
+						}
+					});
+				} else {
+					onFailure.call(new Pair<String, Throwable>("Error loading courses and course registrations", caught));
+				}
+			}
+			
+			@Override
+			public void onSuccess(CourseAndCourseRegistration[] result) {
+				onSuccess.call(result);
+			}
+		});
+	}
+
+	/**
+	 * Load list of {@link User}s in course indicated by a {@link CourseSelection}.
+	 * 
+	 * @param page            the {@link CloudCoderPage}
+	 * @param courseSelection the {@link CourseSelection}
+	 * @param onSuccess       success callback
+	 * @param onFailure       failure callback
+	 */
+	public static void loadUsersInCourse(
+			final CloudCoderPage page,
+			final CourseSelection courseSelection,
+			final ICallback<User[]> onSuccess,
+			final ICallback<Pair<String, Throwable>> onFailure) {
+		RPC.usersService.getUsers(courseSelection.getCourse().getId(), 0, new AsyncCallback<User[]>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				if (caught instanceof CloudCoderAuthenticationException) {
+					page.recoverFromServerSessionTimeout(new Runnable() {
+						@Override
+						public void run() {
+							loadUsersInCourse(page, courseSelection, onSuccess, onFailure);
+						}
+					});
+				} else {
+					onFailure.call(new Pair<String, Throwable>("Error loading users in course", caught));
+				}
+			}
+			
+			@Override
+			public void onSuccess(User[] result) {
+				onSuccess.call(result);
+			}
+		});
 	}
 }

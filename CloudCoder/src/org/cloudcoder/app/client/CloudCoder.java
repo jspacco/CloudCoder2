@@ -24,7 +24,6 @@ import org.cloudcoder.app.client.model.StatusMessage;
 import org.cloudcoder.app.client.page.CloudCoderPage;
 import org.cloudcoder.app.client.page.CoursesAndProblemsPage2;
 import org.cloudcoder.app.client.page.DevelopmentPage;
-import org.cloudcoder.app.client.page.DevelopmentPage2;
 import org.cloudcoder.app.client.page.EditProblemPage;
 import org.cloudcoder.app.client.page.InitErrorPage;
 import org.cloudcoder.app.client.page.LoginPage;
@@ -37,18 +36,21 @@ import org.cloudcoder.app.client.page.UserAdminPage;
 import org.cloudcoder.app.client.page.UserProblemSubmissionsPage;
 import org.cloudcoder.app.client.page.UserProgressPage;
 import org.cloudcoder.app.client.rpc.RPC;
-import org.cloudcoder.app.shared.model.Activity;
-import org.cloudcoder.app.shared.model.ActivityObject;
+import org.cloudcoder.app.client.view.PageLoadErrorView;
+import org.cloudcoder.app.shared.model.ICallback;
 import org.cloudcoder.app.shared.model.InitErrorException;
+import org.cloudcoder.app.shared.model.Pair;
 import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.util.DefaultSubscriptionRegistrar;
 import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
+import com.google.gwt.activity.shared.Activity;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.RootLayoutPanel;
@@ -57,15 +59,30 @@ import com.google.gwt.user.client.ui.RootLayoutPanel;
  * CloudCoder entry point class.
  */
 public class CloudCoder implements EntryPoint, Subscriber {
+	private static CloudCoder theInstance;
+	
 	private Session session;
 	private PageStack pageStack;
 	private SubscriptionRegistrar subscriptionRegistrar;
 	private CloudCoderPage currentPage;
 	
 	/**
+	 * Get the singleton instance.
+	 * 
+	 * @return the singleton instance
+	 */
+	public static CloudCoder getInstance() {
+		return theInstance;
+	}
+	
+	/**
 	 * This is the entry point method.
 	 */
 	public void onModuleLoad() {
+		theInstance = this;
+		
+		GWT.log("loading, fragment name is " + Window.Location.getHash());
+		
 		session = new Session();
 		pageStack = new PageStack();
 		session.add(pageStack);
@@ -82,9 +99,36 @@ public class CloudCoder implements EntryPoint, Subscriber {
 	}
 
 	private void createInitialPage() {
-		// Check to see if the user is already logged in, and if so,
-		// if there is an Activity set.  A bit complicated because it
-		// involves two RPC calls that are chained.
+		// See if a URL fragment was specified, and if so, see if it
+		// identifies a valid page.
+		
+		PageId linkPageId_ = null; // page id specified by the link, if any
+		String linkPageParams_ = null; // page parameters specified by the link, if any
+		
+		String fragment = Window.Location.getHash();
+		if (fragment != null && !fragment.equals("")) {
+			GWT.log("URL fragment is " + fragment);
+			String fragmentName = getFragmentName(fragment);
+			GWT.log("Fragment name is " + fragmentName);
+			
+			linkPageId_ = PageId.forFragmentName(fragmentName);
+			if (linkPageId_ != null) {
+				linkPageParams_ = getFragmentParams(fragment);
+				GWT.log("Link params: " + linkPageParams_);
+			}
+		}
+		
+		// Special case: don't attempt to redirect to the login page or init error page.
+		// That would be silly.
+		if (linkPageId_ == PageId.LOGIN || linkPageId_ == PageId.INIT_ERROR) {
+			linkPageId_ = null;
+			linkPageParams_ = null;
+		}
+		
+		final PageId linkPageId = linkPageId_;
+		final String linkPageParams = linkPageParams_;
+		
+		// Check to see if the user is already logged in.
 		RPC.loginService.getUser(new AsyncCallback<User>() {
 			@Override
 			public void onFailure(Throwable caught) {
@@ -104,61 +148,69 @@ public class CloudCoder implements EntryPoint, Subscriber {
 			public void onSuccess(User result) {
 				if (result == null) {
 					// Not logged in, so show LoginPage
-					changePage(new LoginPage());
+					LoginPage loginPage = new LoginPage();
+					if (linkPageId != null) {
+						GWT.log("Login page will redirect to " + linkPageId + ":" + linkPageParams);
+						// A page was linked in the original URL,
+						// so have the LoginPage try to navigate to it
+						// on a successful login.
+						loginPage.setLinkPageId(linkPageId);
+						loginPage.setLinkPageParams(linkPageParams);
+					}
+					changePage(loginPage);
 				} else {
+					// User is logged in!
 					final User user = result;
-					
-					// User is logged in: get Activity
-					RPC.loginService.getActivity(new AsyncCallback<Activity>() {
-						@Override
-						public void onFailure(Throwable caught) {
-							session.add(StatusMessage.error("Could not check for current login status: " + caught.getMessage()));
-							changePage(new LoginPage());
-						}
 
-						@Override
-						public void onSuccess(Activity result) {
-							// Add user to session
-							session.add(user);
-							
-							// Did we find the user's Activity?
-							if (result == null) {
-								// Don't know what the user's activity was, so take
-								// them to the courses/problems page
-								changePage(new CoursesAndProblemsPage2());
-							} else {
-								// We have an activity.  Find the page.
-								CloudCoderPage page = getPageForActivity(result);
-								
-								// Restore the session objects.
-								for (Object obj : result.getSessionObjects()) {
-									GWT.log("Restoring activity object: " + obj.getClass().getName());
-									session.add(obj);
-								}
-								
-								changePage(page);
-							}
-						}
-					});
+					// Add user to session
+					session.add(user);
+
+					// If a page id was specified as part of the original URL,
+					// try to navigate to it.
+					if (linkPageId != null) {
+						GWT.log("Already logged in, linking page " + linkPageId + ":" + linkPageParams);
+						CloudCoderPage page = createPageForPageId(linkPageId, linkPageParams);
+						changePage(page);
+					} else {
+						// Default behavior: navigate to the home page
+						changePage(new CoursesAndProblemsPage2());
+					}
 				}
 			}
 		});
 	}
 
-	protected CloudCoderPage getPageForActivity(Activity result) {
-		String name = result.getName();
-		
-		CloudCoderPage page = null;
-		
-		// The activity name must be the string representation of a PageId.
-		try {
-			PageId pageId = PageId.valueOf(name);
-			
-			page = createPageForPageId(pageId);
-		} catch (IllegalArgumentException e) {
-			GWT.log("Illegal activity name: " + name);
-			page = new CoursesAndProblemsPage2();
+	/**
+	 * Get the fragment name.
+	 * E.g., if the fragment is "exercise?c=4,p=5", then the
+	 * fragment name is "exercise".
+	 * 
+	 * @param fragment the fragment
+	 * @return the fragment name
+	 */
+	private String getFragmentName(String fragment) {
+		if (fragment.startsWith("#")) {
+			fragment = fragment.substring(1);
 		}
+		int ques = fragment.indexOf('?');
+		return (ques >= 0) ? fragment.substring(0, ques) : fragment;
+	}
+
+	/**
+	 * Get the fragment parameters.
+	 * E.g., if the fragment is "exercise?c=4,p=5", then the
+	 * parameters are "c=4,p=5".
+	 * 
+	 * @param fragment the fragment
+	 * @return the fragment parameters
+	 */
+	private String getFragmentParams(String fragment) {
+		int ques = fragment.indexOf('?');
+		return ques >= 0 ? fragment.substring(ques+1) : "";
+	}
+
+	protected CloudCoderPage createPageForPageId(PageId pageId, String pageParams) {
+		CloudCoderPage page = createPageForPageId(pageId);
 		
 		// Create a reasonable PageStack.
 		// (Note that we need to disable notifications while we do this,
@@ -168,6 +220,11 @@ public class CloudCoder implements EntryPoint, Subscriber {
 		page.initDefaultPageStack(pageStack);
 		pageStack.push(page.getPageId());
 		pageStack.setNotifications(true);
+		
+		// Set initial page parameters (if any)
+		if (pageParams != null) {
+			page.setUrlFragmentParams(pageParams);
+		}
 		
 		return page;
 	}
@@ -219,33 +276,7 @@ public class CloudCoder implements EntryPoint, Subscriber {
 		return page;
 	}
 	
-	protected Activity getActivityForPage(CloudCoderPage page) {
-		return getActivityForSessionAndPage(page, session);
-	}
-
-	/**
-	 * Create an {@link Activity} for current page and session.
-	 *  
-	 * @param page     current page
-	 * @param session  current session
-	 * @return the {@link Activity}
-	 */
-	public static Activity getActivityForSessionAndPage(CloudCoderPage page, Session session) {
-		// The activity name is the page's PageId (as a string)
-		Activity activity = new Activity(page.getPageId().toString());
-		
-		// Record the Session objects (the ones that are ActivityObjects)
-		for (Object obj : session.getObjects()) {
-			if (obj instanceof ActivityObject) {
-				GWT.log("Adding " + obj.getClass().getName() + " to Activity");
-				activity.addSessionObject((ActivityObject) obj);
-			}
-		}
-		
-		return activity;
-	}
-	
-	private void changePage(CloudCoderPage page) {
+	private void changePage(final CloudCoderPage page) {
 		if (currentPage != null) {
 			currentPage.deactivate();
 			RootLayoutPanel.get().remove(currentPage.getWidget());
@@ -254,34 +285,40 @@ public class CloudCoder implements EntryPoint, Subscriber {
 			session.remove(StatusMessage.class);
 		}
 		page.setSession(session);
-
-		// Create the page's Widget and add it to the DOM tree.
-		// Leave a 10 pixel border around the page widget.
-		page.createWidget();
-		IsWidget w = page.getWidget();
-		RootLayoutPanel.get().add(w);
-		RootLayoutPanel.get().setWidgetLeftRight(w, 10.0, Unit.PX, 10.0, Unit.PX);
-		RootLayoutPanel.get().setWidgetTopBottom(w, 10.0, Unit.PX, 10.0, Unit.PX);
-
-		// Now it is safe to activate the page
-		page.activate();
-		currentPage = page;
 		
-		// Inform the server of the Activity (page) that the user is now working on,
-		// if the page requests it.  Otherwise set the activity to null.
-		Activity activity = page.isActivity() ? getActivityForPage(page) : null;
-		RPC.loginService.setActivity(activity, new AsyncCallback<Void>() {
-			@Override
-			public void onFailure(Throwable caught) {
-				// There's not really anything useful we can do here.
-				GWT.log("Couldn't set activity on server?", caught);
-			}
+		// Now it is safe to load the page objects, create the page UI, and activate the page
+		page.loadPageObjects(
+				new Runnable() {
+					@Override
+					public void run() {
+						// Set the URL fragment to properly identify this page
+						page.setFragment();
 
-			@Override
-			public void onSuccess(Void result) {
-				// Nothing to do
-			}
-		});
+						// Create the page's Widget and add it to the DOM tree.
+						page.createWidget();
+						showPageUI(page.getWidget());
+
+						// Activate the page
+						page.activate();
+
+						// Make this page current
+						currentPage = page;
+					}
+				}, new ICallback<Pair<String, Throwable>>() {
+					@Override
+					public void call(Pair<String, Throwable> value) {
+						// Loading page objects was unsuccessful, so show an
+						// error UI that will allow the user to navigate back
+						// to the home page.
+						session.add(StatusMessage.error(value.getLeft(), value.getRight()));
+						PageLoadErrorView w = new PageLoadErrorView();
+						page.setWidget(w);
+						showPageUI(w);
+						currentPage = page;
+						w.activate(session, subscriptionRegistrar);
+					}
+				}
+		);
 	}
 	
 	@Override
@@ -300,5 +337,30 @@ public class CloudCoder implements EntryPoint, Subscriber {
 			session.add(pageStack);
 			changePage(new LoginPage());
 		}
+	}
+	
+	/**
+	 * Create and activate the specified page following a successful
+	 * login.
+	 * 
+	 * @param pageId     the page id
+	 * @param pageParams the page params, if any
+	 */
+	public void createPostLoginPage(PageId pageId, String pageParams) {
+		GWT.log("Post-login: go to page " + pageId + (pageParams != null ? (", params=" + pageParams) : ""));
+		CloudCoderPage page = createPageForPageId(pageId, pageParams);
+		changePage(page);
+	}
+
+	/**
+	 * Show a page UI.
+	 * 
+	 * @param w the page UI
+	 */
+	private void showPageUI(IsWidget w) {
+		// Leave a 10 pixel border around the page widget.
+		RootLayoutPanel.get().add(w);
+		RootLayoutPanel.get().setWidgetLeftRight(w, 10.0, Unit.PX, 10.0, Unit.PX);
+		RootLayoutPanel.get().setWidgetTopBottom(w, 10.0, Unit.PX, 10.0, Unit.PX);
 	}
 }

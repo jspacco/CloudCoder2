@@ -36,6 +36,7 @@ import org.cloudcoder.app.shared.model.Course;
 import org.cloudcoder.app.shared.model.CourseRegistration;
 import org.cloudcoder.app.shared.model.CourseRegistrationList;
 import org.cloudcoder.app.shared.model.CourseRegistrationType;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.EditedUser;
 import org.cloudcoder.app.shared.model.ICallback;
 import org.cloudcoder.app.shared.model.User;
@@ -613,47 +614,26 @@ public class UserAdminPage extends CloudCoderPage
             getSession().get(PageStack.class).push(PageId.USER_PROGRESS);
         }
     }
-    
-    private UI ui;
 
     /* (non-Javadoc)
      * @see org.cloudcoder.app.client.page.CloudCoderPage#createWidget()
      */
     @Override
     public void createWidget() {
-        ui = new UI();
+        setWidget(new UI());
     }
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{ CourseSelection.class };
+	}
 
     /* (non-Javadoc)
      * @see org.cloudcoder.app.client.page.CloudCoderPage#activate()
      */
     @Override
     public void activate() {
-        ui.activate(getSession(), getSubscriptionRegistrar());
-    }
-
-    /* (non-Javadoc)
-     * @see org.cloudcoder.app.client.page.CloudCoderPage#deactivate()
-     */
-    @Override
-    public void deactivate() {
-        getSubscriptionRegistrar().cancelAllSubscriptions();
-    }
-
-    /* (non-Javadoc)
-     * @see org.cloudcoder.app.client.page.CloudCoderPage#getWidget()
-     */
-    @Override
-    public IsWidget getWidget() {
-        return ui;
-    }
-
-    /* (non-Javadoc)
-     * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-     */
-    @Override
-    public boolean isActivity() {
-        return true;
+        ((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
     }
     
     @Override

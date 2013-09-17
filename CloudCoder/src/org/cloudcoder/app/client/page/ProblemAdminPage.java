@@ -35,9 +35,11 @@ import org.cloudcoder.app.shared.dto.ShareExerciseStatus;
 import org.cloudcoder.app.shared.dto.ShareExercisesResult;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.Course;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.ICallback;
 import org.cloudcoder.app.shared.model.Module;
 import org.cloudcoder.app.shared.model.OperationResult;
+import org.cloudcoder.app.shared.model.Pair;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemAndModule;
 import org.cloudcoder.app.shared.model.ProblemAndTestCaseList;
@@ -277,7 +279,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 			
 			// Would like to send problems in bulk and fetch test cases server-side
 			for (Problem problem : chosen) {
-			    loadProblemAndTestCaseList(problem, new ICallback<ProblemAndTestCaseList>() {
+			    SessionUtil.loadProblemAndTestCaseList(ProblemAdminPage.this, problem, new ICallback<ProblemAndTestCaseList>() {
 	                /* (non-Javadoc)
 	                 * @see org.cloudcoder.app.shared.model.ICallback#call(java.lang.Object)
 	                 */
@@ -286,7 +288,13 @@ public class ProblemAdminPage extends CloudCoderPage {
 	                    value.getProblem().setVisible(visible);
 	                    updateProblem(value, course);
 	                }
-	            });
+	            },
+	            new ICallback<Pair<String,Throwable>>() {
+	            	@Override
+	            	public void call(Pair<String, Throwable> value) {
+	            		getSession().add(StatusMessage.error(value.getLeft(), value.getRight()));
+	            	}
+				});
             }
 		}
 		
@@ -298,7 +306,7 @@ public class ProblemAdminPage extends CloudCoderPage {
             
             // Would like to send problems in bulk and fetch test cases server-side
             for (Problem problem : chosen) {
-                loadProblemAndTestCaseList(problem, new ICallback<ProblemAndTestCaseList>() {
+                SessionUtil.loadProblemAndTestCaseList(ProblemAdminPage.this, problem, new ICallback<ProblemAndTestCaseList>() {
                     /* (non-Javadoc)
                      * @see org.cloudcoder.app.shared.model.ICallback#call(java.lang.Object)
                      */
@@ -307,7 +315,13 @@ public class ProblemAdminPage extends CloudCoderPage {
                         value.getProblem().setLicense(ProblemLicense.CC_ATTRIB_SHAREALIKE_3_0);
                         updateProblem(value, course);
                     }
-                });
+                },
+                new ICallback<Pair<String,Throwable>>() {
+                	@Override
+                	public void call(Pair<String, Throwable> value) {
+                		getSession().add(StatusMessage.error(value.getLeft(), value.getRight()));
+                	}
+				});
             }
 		}
 		
@@ -402,11 +416,16 @@ public class ProblemAdminPage extends CloudCoderPage {
 			    return;
 			}
 			
-			loadProblemAndTestCaseList(chosen, new ICallback<ProblemAndTestCaseList>() {
+			SessionUtil.loadProblemAndTestCaseList(ProblemAdminPage.this, chosen, new ICallback<ProblemAndTestCaseList>() {
 				@Override
 				public void call(ProblemAndTestCaseList value) {
 					getSession().add(value);
 					getSession().get(PageStack.class).push(PageId.EDIT_PROBLEM);
+				}
+			},
+			new ICallback<Pair<String,Throwable>>() {
+				public void call(Pair<String,Throwable> value) {
+					getSession().add(StatusMessage.error(value.getLeft(), value.getRight()));
 				}
 			});
 		}
@@ -453,43 +472,6 @@ public class ProblemAdminPage extends CloudCoderPage {
 		private void handleStatistics() {
 			// Switch to the StatisticsPage
 			getSession().get(PageStack.class).push(PageId.STATISTICS);
-		}
-
-		/**
-		 * Load a complete {@link ProblemAndTestCaseList} for given {@link Problem}.
-		 * An RPC call is made to fetch the {@link TestCase}s for the problem,
-		 * and the result is delivered asynchronously to a callback.
-		 *
-		 * @param problem    the problem
-		 * @param callback   the callback to receive the full {@link ProblemAndTestCaseList}
-		 */
-		private void loadProblemAndTestCaseList(
-				final Problem problem,
-				final ICallback<ProblemAndTestCaseList> callback) {
-			RPC.getCoursesAndProblemsService.getTestCasesForProblem(problem.getProblemId(), new AsyncCallback<TestCase[]>() {
-				@Override
-				public void onFailure(Throwable caught) {
-					if (caught instanceof CloudCoderAuthenticationException) {
-						recoverFromServerSessionTimeout(new Runnable() {
-							public void run() {
-								// Try again!
-								loadProblemAndTestCaseList(problem, callback);
-							}
-						});
-					} else {
-						getSession().add(StatusMessage.error("Could not load test cases for problem: " + caught.getMessage()));
-					}
-				}
-
-				@Override
-				public void onSuccess(TestCase[] result) {
-					// Success!
-					ProblemAndTestCaseList problemAndTestCaseList = new ProblemAndTestCaseList();
-					problemAndTestCaseList.setProblem(problem);
-					problemAndTestCaseList.setTestCaseList(result);
-					callback.call(problemAndTestCaseList);
-				}
-			});
 		}
 		
 		private void handleNewProblem() {
@@ -632,14 +614,17 @@ public class ProblemAdminPage extends CloudCoderPage {
 		}
 	}
 
-	private UI ui;
-
 	/* (non-Javadoc)
 	 * @see org.cloudcoder.app.client.page.CloudCoderPage#createWidget()
 	 */
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{ CourseSelection.class };
 	}
 
 	/* (non-Javadoc)
@@ -647,31 +632,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 	 */
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#deactivate()
-	 */
-	@Override
-	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#getWidget()
-	 */
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-	 */
-	@Override
-	public boolean isActivity() {
-		return true;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 	
 	@Override

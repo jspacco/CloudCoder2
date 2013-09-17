@@ -21,6 +21,7 @@ import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Section;
 import org.cloudcoder.app.client.model.Session;
+import org.cloudcoder.app.client.view.ButtonPanel;
 import org.cloudcoder.app.client.view.PageNavPanel;
 import org.cloudcoder.app.client.view.ProblemProgressView;
 import org.cloudcoder.app.client.view.SectionSelectionView;
@@ -42,7 +43,6 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.InlineHTML;
-import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 
@@ -54,7 +54,7 @@ import com.google.gwt.user.client.ui.LayoutPanel;
 public class StatisticsPage extends CloudCoderPage {
 	
 	private class UI extends Composite implements Subscriber {
-		private static final double STATS_OPTION_PANEL_HEIGHT_PX = 28.0;
+		private static final double STATS_OPTION_PANEL_HEIGHT_PX = ButtonPanel.HEIGHT_PX;
 
 		private PageNavPanel pageNavPanel;
 		private Label problemLabel;
@@ -183,31 +183,19 @@ public class StatisticsPage extends CloudCoderPage {
 		}
 	}
 
-	private UI ui;
-
 	@Override
 	public void createWidget() {
-		this.ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{ CourseSelection.class, Problem.class };
 	}
 
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	@Override
-	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-	}
-
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	@Override
-	public boolean isActivity() {
-		return true;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 
 	@Override

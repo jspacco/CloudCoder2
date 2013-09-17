@@ -23,7 +23,7 @@ import java.util.List;
 import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
-import org.cloudcoder.app.client.model.StatusMessage;
+import org.cloudcoder.app.client.model.StatusMessage; 
 import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.client.view.ChoiceDialogBox;
 import org.cloudcoder.app.client.view.EditBooleanField;
@@ -39,6 +39,7 @@ import org.cloudcoder.app.client.view.TestCaseEditor;
 import org.cloudcoder.app.client.view.ViewUtil;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.Course;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.EditProblemAdapter;
 import org.cloudcoder.app.shared.model.IProblem;
 import org.cloudcoder.app.shared.model.Problem;
@@ -60,7 +61,6 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
 import com.google.gwt.user.client.ui.FlowPanel;
-import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.ResizeComposite;
@@ -511,15 +511,18 @@ public class EditProblemPage extends CloudCoderPage {
 			});
 		}
 	}
-	
-	private UI ui;
 
 	/* (non-Javadoc)
 	 * @see org.cloudcoder.app.client.page.CloudCoderPage#createWidget()
 	 */
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{CourseSelection.class, Problem.class, ProblemAndTestCaseList.class};
 	}
 
 	/* (non-Javadoc)
@@ -527,31 +530,7 @@ public class EditProblemPage extends CloudCoderPage {
 	 */
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#deactivate()
-	 */
-	@Override
-	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#getWidget()
-	 */
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-	 */
-	@Override
-	public boolean isActivity() {
-		return true;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 	
 	@Override

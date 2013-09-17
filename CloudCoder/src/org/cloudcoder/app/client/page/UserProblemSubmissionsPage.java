@@ -29,10 +29,13 @@ import org.cloudcoder.app.client.view.ReadOnlyProblemTextView;
 import org.cloudcoder.app.client.view.StatusMessageView;
 import org.cloudcoder.app.client.view.TestOutcomeSummaryView;
 import org.cloudcoder.app.client.view.TestResultListView;
+import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.NamedTestResult;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemText;
 import org.cloudcoder.app.shared.model.SubmissionReceipt;
+import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.model.UserSelection;
 import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
@@ -42,7 +45,6 @@ import com.google.gwt.core.shared.GWT;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Composite;
-import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.SplitLayoutPanel;
@@ -224,32 +226,31 @@ public class UserProblemSubmissionsPage extends CloudCoderPage {
 			}
 		}
 	}
-	
-	private UI ui;
 
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{
+				// Which course the problem was assigned in
+				CourseSelection.class,
+				// The Problem
+				Problem.class,
+				// Course registrations for the logged-in user (to check instructor status)
+				CourseAndCourseRegistration[].class,
+				// List of students registered in the course
+				User[].class,
+				// Selected user
+				UserSelection.class
+		};
 	}
 
 	@Override
 	public void activate() {
-		ui.activate(getSession(), getSubscriptionRegistrar());
-	}
-
-	@Override
-	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
-	}
-
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	@Override
-	public boolean isActivity() {
-		return true;
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 
 	@Override

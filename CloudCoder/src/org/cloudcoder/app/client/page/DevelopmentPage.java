@@ -23,6 +23,7 @@ import java.util.List;
 import org.cloudcoder.app.client.model.ChangeFromAceOnChangeEvent;
 import org.cloudcoder.app.client.model.ChangeList;
 import org.cloudcoder.app.client.model.PageId;
+import org.cloudcoder.app.client.model.PageParams;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.QuizInProgress;
 import org.cloudcoder.app.client.model.Session;
@@ -44,6 +45,8 @@ import org.cloudcoder.app.shared.model.ChangeType;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.CompilationOutcome;
 import org.cloudcoder.app.shared.model.CompilerDiagnostic;
+import org.cloudcoder.app.shared.model.Course;
+import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.Language;
 import org.cloudcoder.app.shared.model.NamedTestResult;
 import org.cloudcoder.app.shared.model.Problem;
@@ -868,14 +871,17 @@ public class DevelopmentPage extends CloudCoderPage {
 	}
 
 	
-	private UI ui;
-	
 	public DevelopmentPage() {
 	}
 
 	@Override
 	public void createWidget() {
-		ui = new UI();
+		setWidget(new UI());
+	}
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[]{CourseSelection.class, Problem.class};
 	}
 	
 	@Override
@@ -883,26 +889,13 @@ public class DevelopmentPage extends CloudCoderPage {
 		addSessionObject(new ChangeList());
 		addSessionObject(new NamedTestResult[0]);
 		addSessionObject(new CompilerDiagnostic[0]);
-		ui.activate(getSession(), getSubscriptionRegistrar());
+		((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
 	}
 
 	@Override
 	public void deactivate() {
-		getSubscriptionRegistrar().cancelAllSubscriptions();
+		super.deactivate();
 		removeAllSessionObjects();
-	}
-
-	@Override
-	public IsWidget getWidget() {
-		return ui;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-	 */
-	@Override
-	public boolean isActivity() {
-		return true;
 	}
 	
 	@Override

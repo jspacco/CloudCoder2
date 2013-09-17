@@ -1,6 +1,7 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
 // Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -18,53 +19,85 @@
 package org.cloudcoder.app.client.model;
 
 import org.cloudcoder.app.client.page.CloudCoderPage;
-import org.cloudcoder.app.shared.model.Activity;
 
 /**
  * Abstract identifier for a {@link CloudCoderPage}.
- * Used for things like opaque page identifier to place in
- * an {@link Activity}. 
+ * Used by {@link PageStack} to keep track of navigation
+ * history.  Also specifies the fragment
+ * name that identifies a {@link CloudCoderPage}
+ * when used in the fragment part of a URL.
  * 
  * @author David Hovemeyer
  */
 public enum PageId {
 	/** CloudCoder initialization error. */
-	INIT_ERROR,
+	INIT_ERROR("error"),
 	
 	/** Login page. */
-	LOGIN,
+	LOGIN("login"),
 
 	/** Default home page showing courses and problems. */
-	COURSES_AND_PROBLEMS,
+	COURSES_AND_PROBLEMS("home"),
 	
 	/** The development page (edit code, submit, etc.) */
-	DEVELOPMENT,
+	DEVELOPMENT("exercise"),
 	
 	/** The problem admin page. */
-	PROBLEM_ADMIN,
+	PROBLEM_ADMIN("exercises"),
 	
 	/** The edit problem page. */
-	EDIT_PROBLEM,
+	EDIT_PROBLEM("edit"),
 	
 	/** The user admin page. */
-	USER_ADMIN,
+	USER_ADMIN("users"),
 	
 	/** User account page. */
-	USER_ACCOUNT,
+	USER_ACCOUNT("account"),
 	
 	/** Statistics (all users progress) page. */
-	STATISTICS,
+	STATISTICS("stats"),
 	
 	/** The (individual) user progress page. */
-	USER_PROGRESS,
+	USER_PROGRESS("progress"),
 	
 	/** Quiz administration page. */
-	QUIZ,
+	QUIZ("quiz"),
 	
 	/** View a selected user's submissions for a given problem. */
-	USER_PROBLEM_SUBMISSIONS,
+	USER_PROBLEM_SUBMISSIONS("submissions"),
 	
 	/** The development page for writing and executing code 
 	 * not attached to particular exercises. */
-	PLAYGROUND_PAGE,
+	PLAYGROUND_PAGE("playground");
+	
+	private PageId(String fragmentName) {
+		this.fragmentName = fragmentName;
+	}
+	
+	private final String fragmentName;
+	
+	/**
+	 * Get the URL fragment name identifying this page.
+	 * 
+	 * @return the fragment name
+	 */
+	public String getFragmentName() {
+		return fragmentName;
+	}
+	
+	/**
+	 * Get the {@link PageId} corresponding to the given fragment name.
+	 * 
+	 * @param fragmentName the fragment name
+	 * @return the {@link PageId}, or null if the fragment name
+	 *         does not match any known {@link PageId}
+	 */
+	public static PageId forFragmentName(String fragmentName) {
+		for (PageId id : values()) {
+			if (id.getFragmentName().equals(fragmentName)) {
+				return id;
+			}
+		}
+		return null;
+	}
 }

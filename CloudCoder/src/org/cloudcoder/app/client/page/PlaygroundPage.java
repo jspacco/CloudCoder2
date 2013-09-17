@@ -46,7 +46,6 @@ import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
-import com.gargoylesoftware.htmlunit.javascript.host.Element;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.logical.shared.SelectionEvent;
@@ -54,7 +53,6 @@ import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Composite;
-import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.SplitLayoutPanel;
 import com.google.gwt.user.client.ui.TabLayoutPanel;
@@ -97,8 +95,6 @@ public class PlaygroundPage extends CloudCoderPage
          */
         PREVENT_EDITS,
     }
-
-    private UI ui;
     
     /**
      * UI class for DevelopmentPage.
@@ -553,8 +549,13 @@ public class PlaygroundPage extends CloudCoderPage
      */
     @Override
     public void createWidget() {
-        ui = new UI();
+        setWidget(new UI());
     }
+	
+	@Override
+	public Class<?>[] getRequiredPageObjects() {
+		return new Class<?>[0]; // FIXME
+	}
 
     /* (non-Javadoc)
      * @see org.cloudcoder.app.client.page.CloudCoderPage#activate()
@@ -574,26 +575,13 @@ public class PlaygroundPage extends CloudCoderPage
         
         addSessionObject(PlaygroundTestResult.convertTestCase(testCases));
         addSessionObject(new CompilerDiagnostic[0]);
-        ui.activate(getSession(), getSubscriptionRegistrar());
+        ((UI)getWidget()).activate(getSession(), getSubscriptionRegistrar());
     }
 
     @Override
     public void deactivate() {
-        getSubscriptionRegistrar().cancelAllSubscriptions();
+        super.deactivate();
         removeAllSessionObjects();
-    }
-
-    @Override
-    public IsWidget getWidget() {
-        return ui;
-    }
-
-    /* (non-Javadoc)
-     * @see org.cloudcoder.app.client.page.CloudCoderPage#isActivity()
-     */
-    @Override
-    public boolean isActivity() {
-        return true;
     }
 
     @Override
