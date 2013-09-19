@@ -24,10 +24,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 
+import org.apache.commons.io.IOUtils;
 import org.cloudcoder.builder2.ccompiler.Compiler;
 import org.cloudcoder.builder2.util.DeleteDirectoryRecursively;
 import org.cloudcoder.builder2.util.FileUtil;
-import org.cloudcoder.daemon.IOUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,10 +119,10 @@ public class EasySandboxSharedLibrary {
 			in = this.getClass().getClassLoader().getResourceAsStream("org/cloudcoder/builder2/csandbox/res/" + sourceFileName);
 			InputStreamReader r = new InputStreamReader(in);
 			StringWriter sw = new StringWriter();
-			IOUtil.copy(r, sw);
+			IOUtils.copy(r, sw);
 			return sw.toString();
 		} finally {
-			IOUtil.closeQuietly(in);
+			IOUtils.closeQuietly(in);
 		}
 	}
 }
