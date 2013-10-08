@@ -195,6 +195,9 @@ public class TestResultListView extends ResizeComposite implements SessionObserv
 				return testResult.getTestResult().getStderr();
 			}
 		}), "Error output");
+		// set the width of the stdout/stderr columns
+		cellTable.setColumnWidth(6, "10%");
+		cellTable.setColumnWidth(7, "10%");
 	}
 	
 	public void activate(final Session session, final SubscriptionRegistrar subscriptionRegistrar) {

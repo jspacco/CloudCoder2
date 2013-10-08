@@ -81,7 +81,7 @@ public abstract class AbstractKillableTaskManager<T>
     {
         if (!securityManagerInstalled) {
             throw new IllegalStateException(
-                    "Must call KillableTaskManager.installSecurityManager() before creating instance");
+                    "Must call appropriate AbstractKillableTaskManager.installSecurityManager() before creating instance");
         }
         
         this.tasks=tasks;

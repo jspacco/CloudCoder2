@@ -304,6 +304,25 @@ public class TestPythonFunctionBuildStep implements IBuildStep {
 			diagnostics.add(d);
 			return diagnostics;
 		}
+		
+		static {
+		    try {
+		        /*
+		         *  We need to pre-load all classes that will be used by the Tester.
+		         *  
+		         *  I suspect this is because the Tester is actually running under a different
+		         *  class-loader that cannot access the bytecode.  Somehow.  Although that makes no sense.
+		         *  
+		         *  TODO Figure out how not to pre-load all of these classes
+		         *  TODO Better error reporting
+		         */
+		        Class.forName("org.cloudcoder.builder2.util.TestResultUtil");
+		        Class.forName("org.cloudcoder.app.shared.model.TestOutcome");
+		        Class.forName("org.cloudcoder.app.shared.model.TestResult");
+		    } catch (ClassNotFoundException e) {
+		        System.err.println("Cannot load class");
+		    }
+		}
 
 		/**
 		 * @param testCase
