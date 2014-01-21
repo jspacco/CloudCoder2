@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import org.cloudcoder.builder2.csandbox.EasySandboxSharedLibrary;
 import org.cloudcoder.builder2.model.CommandExecutionPreferences;
@@ -65,8 +66,11 @@ public class LimitedProcessRunner extends ProcessRunner {
 
 	/**
 	 * Constructor.
+	 * 
+	 * @param config builder configuration properties
 	 */
-	public LimitedProcessRunner() {
+	public LimitedProcessRunner(Properties config) {
+		super(config);
 		limitMap = new HashMap<CommandLimit, Integer>();
 		limitMap.putAll(DEFAULT_LIMIT_MAP);
 		easySandboxEnabled = false;
@@ -123,7 +127,7 @@ public class LimitedProcessRunner extends ProcessRunner {
 		// by runProcess.sh.)
 		Integer enableSandbox = limitMap.get(CommandLimit.ENABLE_SANDBOX);
 		if (enableSandbox.intValue() != 0) {
-			String easySandboxShlib = EasySandboxSharedLibrary.getInstance().getSharedLibraryPath();
+			String easySandboxShlib = EasySandboxSharedLibrary.getInstance(getConfig()).getSharedLibraryPath();
 			if (easySandboxShlib == null) {
 				logger.error("Sandboxing requested, but EasySandbox.so is not available");
 				// FIXME: should we abort at this point?

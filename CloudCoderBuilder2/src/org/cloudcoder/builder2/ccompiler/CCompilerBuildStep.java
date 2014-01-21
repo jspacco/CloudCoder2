@@ -1,6 +1,7 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
 // Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -39,7 +40,12 @@ import org.cloudcoder.builder2.util.SubmissionResultUtil;
  * @author Jaime Spacco
  */
 public class CCompilerBuildStep implements IBuildStep {
-	private static final String DEFAULT_PROG_NAME = "prog";
+	/**
+	 * Default name for resulting executable.
+	 * Make it something distinctive so that it shows up clearly
+	 * in process listings.
+	 */
+	private static final String DEFAULT_PROG_NAME = "cctestprog";
 
 	@Override
 	public void execute(BuilderSubmission submission, Properties config) {
@@ -55,7 +61,7 @@ public class CCompilerBuildStep implements IBuildStep {
 		
 		ProgramSource programSource = programSourceList[0];
 		
-		File tempDir = FileUtil.makeTempDir();
+		File tempDir = FileUtil.makeTempDir(config);
 		if (tempDir == null) {
 			// Couldn't create temp dir
 			submission.addArtifact(SubmissionResultUtil.createSubmissionResultForUnexpectedBuildError(
@@ -64,7 +70,7 @@ public class CCompilerBuildStep implements IBuildStep {
 		}
 		submission.addCleanupAction(new DeleteDirectoryCleanupAction(tempDir));
 		
-		Compiler compiler = new Compiler(programSource.getProgramText(), tempDir, DEFAULT_PROG_NAME);
+		Compiler compiler = new Compiler(programSource.getProgramText(), tempDir, DEFAULT_PROG_NAME, config);
 		compiler.setCompilerExe("g++"); // FIXME: should make this configurable
 		if (!compiler.compile()) {
 			// Compilation failed

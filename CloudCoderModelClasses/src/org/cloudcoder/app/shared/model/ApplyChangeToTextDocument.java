@@ -67,6 +67,10 @@ public class ApplyChangeToTextDocument {
 		        if (change.getText().equals("")) {
 		            // null remove; does this make any sense?
 		            // what the heck would we be removing?
+		        } else if (change.getText().contains("\n")) {
+		            // multi-line remove where startrow==endrow
+		            // This should never happen!
+		            throw new RuntimeException();
 		        } else {
 		            // one-line short remove (no newlines)
                     String line = doc.getLine(change.getStartRow());

@@ -157,6 +157,10 @@ public class EditSequence implements Iterable<LineEdit>
     public int getNumChanges() {
         return allChanges.size();
     }
+    
+    public int getNumLines() {
+    	return lines.size();
+    }
 
     public List<Change> getAllChanges() {
         return allChanges;
