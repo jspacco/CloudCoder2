@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -164,9 +165,10 @@ public class GetCoursesAndProblemsServiceImpl extends RemoteServiceServlet
 		// Make sure user is authenticated
 		User user = ServletUtil.checkClientIsAuthenticated(getThreadLocalRequest(), GetCoursesAndProblemsServiceImpl.class);
 		
-		logger.info("getting submission receipts for authenticated user "+user.getUsername());
+		logger.info("getting problems/submission receipts for authenticated user "+user.getUsername());
 		
 		List<ProblemAndSubmissionReceipt> resultList = Database.getInstance().getProblemAndSubscriptionReceiptsInCourse(user, course, forUser, module);
+		logger.info("Received " + resultList.size() + " problems/submission receipts");
 		return resultList.toArray(new ProblemAndSubmissionReceipt[resultList.size()]);
 	}
 	
@@ -192,6 +194,19 @@ public class GetCoursesAndProblemsServiceImpl extends RemoteServiceServlet
 		User user = ServletUtil.checkClientIsAuthenticated(getThreadLocalRequest(), GetCoursesAndProblemsServiceImpl.class);
 
 		return Database.getInstance().getTestCasesForProblem(user, true, problemId);
+	}
+	
+	@Override
+	public TestCase[] getNonSecretTestCasesForProblem(int problemId) throws CloudCoderAuthenticationException {
+		User user = ServletUtil.checkClientIsAuthenticated(getThreadLocalRequest(), GetCoursesAndProblemsServiceImpl.class);
+		TestCase[] testCases = Database.getInstance().getTestCasesForProblem(user, false, problemId);
+		ArrayList<TestCase> nonSecretTestCases = new ArrayList<TestCase>();
+		for (TestCase tc : testCases) {
+			if (!tc.isSecret()) {
+				nonSecretTestCases.add(tc);
+			}
+		}
+		return nonSecretTestCases.toArray(new TestCase[nonSecretTestCases.size()]);
 	}
 	
 	/* (non-Javadoc)
