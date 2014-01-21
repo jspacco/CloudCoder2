@@ -444,8 +444,11 @@ public class ConfigurationUtil
         PreparedStatement stmt = null;
         ResultSet resultSet = null;
         try {
-            stmt = conn.prepareStatement("select * from " + CourseRegistration.SCHEMA.getDbTableName()+
-                    " where course_id = ?");
+            stmt = conn.prepareStatement("select u.* " +
+            		" from " + User.SCHEMA.getDbTableName()+ " as u, "+
+                    CourseRegistration.SCHEMA.getDbTableName()+" as r "+
+                    " where r.course_id = ? " +
+                    " and u.id=r.user_id");
             stmt.setInt(1, courseId);
             Set<Integer> users=new HashSet<Integer>();
 
