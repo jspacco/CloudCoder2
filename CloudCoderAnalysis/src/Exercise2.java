@@ -2,7 +2,6 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.cloudcoder.analysis.tracing.rewriter.java.VariableStore;
 
 
@@ -30,7 +29,7 @@ public class Exercise2
     static int ___currentLineNum=0;
     static int ___loop01iter=0;
     static Map<Integer, VariableStore> ___lineMap=new TreeMap<Integer,VariableStore>();
-    
+
     
 
     static int getMax(int[] arr) {

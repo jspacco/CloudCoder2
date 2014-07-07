@@ -124,7 +124,7 @@
 	margin: 0px;
 	border: 0px;
 	padding: 0px;
-	width: 200px;
+	width: 160px;
 	height: 28px;
 	background-color: black;
 }
@@ -256,4 +256,48 @@
 	top: 6px !important;
 	left: 8px !important;
 	right: 16px !important;
+}
+
+/*
+ * Styles for author information.
+ */
+ .cc-authorInfo {
+	border-top: 1px solid gray;	
+}
+
+/*
+ * Style for DevActionsPanel2 (reset and submit buttons).
+ * We want them to float right in their container div.
+ * Also push it down a tad to allow some visual separation
+ * from the editor.
+ */
+ .cc-devActionsPanel {
+    margin-top: 4px;
+ 	float: right;
+ }
+ 
+ /**
+  * Style for labeled date/time picker.
+  * Used in SetDatesPanel (for setting the assigned/due dates
+  * of many problems at once).
+  */
+.cc-labeledDateTimePicker {
+	display: inline-block;
+	margin: 10px 10px;
+}
+
+/**
+ * Increase the z-index for date box popups so that they
+ * are above the current dialog (which has a high z-index to
+ * ensure that it is visible above any Ace editor instance.
+ */
+.dateBoxPopup {
+	z-index: 1002 !important;
+}
+/*
+ * Same goes for the TimeBox menu (needs to float above
+ * dialogs).
+ */
+.gwt-TimeBox-menu {
+	z-index: 1002 !important;
 }

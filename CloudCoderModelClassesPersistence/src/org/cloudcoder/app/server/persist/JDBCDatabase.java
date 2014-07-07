@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 // Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,11 +22,13 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import org.cloudcoder.app.server.persist.txn.AddRepoProblemTag;
 import org.cloudcoder.app.server.persist.txn.AddTestCasesToProblem;
 import org.cloudcoder.app.server.persist.txn.AddUserRegistrationRequest;
 import org.cloudcoder.app.server.persist.txn.AddUserToCourse;
+import org.cloudcoder.app.server.persist.txn.AnonymizeUserData;
 import org.cloudcoder.app.server.persist.txn.AuthenticateUser;
 import org.cloudcoder.app.server.persist.txn.CompleteRegistration;
 import org.cloudcoder.app.server.persist.txn.CreateProblemSummary;
@@ -39,6 +41,7 @@ import org.cloudcoder.app.server.persist.txn.FindCourseRegistrationsGivenUserAnd
 import org.cloudcoder.app.server.persist.txn.FindCurrentQuiz;
 import org.cloudcoder.app.server.persist.txn.FindUnfinishedQuizForStudent;
 import org.cloudcoder.app.server.persist.txn.FindUserRegistrationRequestGivenSecret;
+import org.cloudcoder.app.server.persist.txn.FindWorkSessions;
 import org.cloudcoder.app.server.persist.txn.GetAllChangesNewerThan;
 import org.cloudcoder.app.server.persist.txn.GetAllSubmissionReceiptsForUserAndProblem;
 import org.cloudcoder.app.server.persist.txn.GetBestSubmissionReceiptsForProblem;
@@ -57,6 +60,7 @@ import org.cloudcoder.app.server.persist.txn.GetProblemsInCourse;
 import org.cloudcoder.app.server.persist.txn.GetRatingsForRepoProblem;
 import org.cloudcoder.app.server.persist.txn.GetRepoProblemAndTestCaseListGivenHash;
 import org.cloudcoder.app.server.persist.txn.GetRepoProblemTags;
+import org.cloudcoder.app.server.persist.txn.GetSchemaVersions;
 import org.cloudcoder.app.server.persist.txn.GetSectionsForCourse;
 import org.cloudcoder.app.server.persist.txn.GetSubmissionReceipt;
 import org.cloudcoder.app.server.persist.txn.GetSubmissionText;
@@ -66,6 +70,7 @@ import org.cloudcoder.app.server.persist.txn.GetTestResultsForSubmission;
 import org.cloudcoder.app.server.persist.txn.GetUserGivenId;
 import org.cloudcoder.app.server.persist.txn.GetUserWithoutAuthentication;
 import org.cloudcoder.app.server.persist.txn.GetUsersInCourse;
+import org.cloudcoder.app.server.persist.txn.ImportAllProblemsFromCourse;
 import org.cloudcoder.app.server.persist.txn.InsertProblem;
 import org.cloudcoder.app.server.persist.txn.InsertUsersFromInputStream;
 import org.cloudcoder.app.server.persist.txn.InstructorStartQuiz;
@@ -74,8 +79,10 @@ import org.cloudcoder.app.server.persist.txn.LoadChangesForAllUsersOnProblem;
 import org.cloudcoder.app.server.persist.txn.ReloadModelObject;
 import org.cloudcoder.app.server.persist.txn.ReplaceSubmissionReceipt;
 import org.cloudcoder.app.server.persist.txn.ReplaceTestResults;
+import org.cloudcoder.app.server.persist.txn.RetrieveSnapshots;
 import org.cloudcoder.app.server.persist.txn.SearchRepositoryExercises;
 import org.cloudcoder.app.server.persist.txn.SetModuleForProblem;
+import org.cloudcoder.app.server.persist.txn.SetProblemDates;
 import org.cloudcoder.app.server.persist.txn.StoreChanges;
 import org.cloudcoder.app.server.persist.txn.StoreProblemAndTestCaseList;
 import org.cloudcoder.app.server.persist.txn.StoreRepoProblemAndTestCaseList;
@@ -85,6 +92,7 @@ import org.cloudcoder.app.server.persist.txn.SuggestTagNames;
 import org.cloudcoder.app.server.persist.util.AbstractDatabaseRunnable;
 import org.cloudcoder.app.server.persist.util.AbstractDatabaseRunnableNoAuthException;
 import org.cloudcoder.app.server.persist.util.DatabaseRunnable;
+import org.cloudcoder.app.shared.model.Anonymization;
 import org.cloudcoder.app.shared.model.Change;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.ConfigurationSetting;
@@ -110,6 +118,7 @@ import org.cloudcoder.app.shared.model.RepoProblemRating;
 import org.cloudcoder.app.shared.model.RepoProblemSearchCriteria;
 import org.cloudcoder.app.shared.model.RepoProblemSearchResult;
 import org.cloudcoder.app.shared.model.RepoProblemTag;
+import org.cloudcoder.app.shared.model.SnapshotSelectionCriteria;
 import org.cloudcoder.app.shared.model.StartedQuiz;
 import org.cloudcoder.app.shared.model.SubmissionReceipt;
 import org.cloudcoder.app.shared.model.TestCase;
@@ -117,6 +126,7 @@ import org.cloudcoder.app.shared.model.TestResult;
 import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.model.UserAndSubmissionReceipt;
 import org.cloudcoder.app.shared.model.UserRegistrationRequest;
+import org.cloudcoder.app.shared.model.WorkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -459,6 +469,36 @@ public class JDBCDatabase implements IDatabase {
 	@Override
 	public List<RepoProblemRating> getRatingsForRepoProblem(int repoProblemId) {
 		return databaseRun(new GetRatingsForRepoProblem(repoProblemId));
+	}
+	
+	@Override
+	public OperationResult importAllProblemsFromCourse(Course source, Course dest, User instructor) {
+		return databaseRun(new ImportAllProblemsFromCourse(source, dest, instructor));
+	}
+	
+	@Override
+	public OperationResult updateProblemDates(User authenticatedUser, Problem[] problems) {
+		return databaseRun(new SetProblemDates(authenticatedUser, problems));
+	}
+	
+	@Override
+	public Map<String, Integer> getSchemaVersions() {
+		return databaseRun(new GetSchemaVersions());
+	}
+	
+	@Override
+	public List<Anonymization> anonymizeUserData(String genPasswd, Runnable progressCallback) {
+		return databaseRun(new AnonymizeUserData(genPasswd, progressCallback));
+	}
+	
+	@Override
+	public List<WorkSession> findWorkSessions(int courseId, int separationSeconds) {
+		return databaseRun(new FindWorkSessions(courseId, separationSeconds));
+	}
+	
+	@Override
+	public void retrieveSnapshots(SnapshotSelectionCriteria criteria, SnapshotCallback callback) {
+		databaseRun(new RetrieveSnapshots(criteria, callback));
 	}
 
 	/**

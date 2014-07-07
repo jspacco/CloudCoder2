@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 // Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,9 +20,11 @@ package org.cloudcoder.app.server.persist;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 
 import org.cloudcoder.app.server.persist.util.AbstractDatabaseRunnable;
 import org.cloudcoder.app.server.persist.util.AbstractDatabaseRunnableNoAuthException;
+import org.cloudcoder.app.shared.model.Anonymization;
 import org.cloudcoder.app.shared.model.Change;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.ConfigurationSetting;
@@ -50,6 +52,7 @@ import org.cloudcoder.app.shared.model.RepoProblemRating;
 import org.cloudcoder.app.shared.model.RepoProblemSearchCriteria;
 import org.cloudcoder.app.shared.model.RepoProblemSearchResult;
 import org.cloudcoder.app.shared.model.RepoProblemTag;
+import org.cloudcoder.app.shared.model.SnapshotSelectionCriteria;
 import org.cloudcoder.app.shared.model.StartedQuiz;
 import org.cloudcoder.app.shared.model.SubmissionReceipt;
 import org.cloudcoder.app.shared.model.SubmissionStatus;
@@ -59,6 +62,7 @@ import org.cloudcoder.app.shared.model.TestResult;
 import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.model.UserAndSubmissionReceipt;
 import org.cloudcoder.app.shared.model.UserRegistrationRequest;
+import org.cloudcoder.app.shared.model.WorkSession;
 
 /**
  * Thin abstraction layer for interactions with database.
@@ -439,25 +443,6 @@ public interface IDatabase {
 	 * @return true if the problem was deleted successfully, false otherwise
 	 */
 	public boolean deleteProblem(User user, Course course, Problem problem) throws CloudCoderAuthenticationException;
-	
-	/**
-	 * Run a database transaction.
-	 * 
-	 * @param databaseRunnable the database transaction to run
-	 * @return the result of the database transaction
-	 * @throws PersistenceException if an error occurs
-	 */
-	public<E> E databaseRun(AbstractDatabaseRunnableNoAuthException<E> databaseRunnable);
-	
-	/**
-	 * Run a database transaction that can throw an authorization exception.
-	 * 
-	 * @param databaseRunnable the database transaction to run
-	 * @return the result of the database transaction
-	 * @throws PersistenceException if an error occurs
-	 * @throws CloudCoderAuthenticationException if an authorization exception occurs
-	 */
-	public<E> E databaseRunAuth(AbstractDatabaseRunnable<E> databaseRunnable) throws CloudCoderAuthenticationException;
 
 	/**
 	 * Add a {@link UserRegistrationRequest} to the database.
@@ -660,5 +645,64 @@ public interface IDatabase {
 	 * @return list of {@link RepoProblemRating}s for the exercise
 	 */
 	public List<RepoProblemRating> getRatingsForRepoProblem(int repoProblemId);
+	
+	/**
+	 * Import all of the problems from given source {@link Course}
+	 * to given destination {@link Course}.  Note that no authentication
+	 * is done: the specified instructor is assumed to be registered as
+	 * an instructor in both courses.
+	 * 
+	 * @param source the source {@link Course}
+	 * @param dest   the destination {@link Course}
+	 * @param instructor a {@link User} that is an instructor in both courses
+	 * @return an {@link OperationResult} describing the success or failure of the operation
+	 */
+	public OperationResult importAllProblemsFromCourse(Course source, Course dest, User instructor);
 
+	/**
+	 * Update the when assigned/when due dates/times of all of the
+	 * given {@link Problem}s.  The authenticated user must be an instructor
+	 * of the course in which the problems are assigned.
+	 * 
+	 * @param authenticatedUser the authenticated user
+	 * @param problems          the problems to update
+	 * @return an {@link OperationResult} indicating the success or failure of the operation
+	 */
+	public OperationResult updateProblemDates(User authenticatedUser, Problem[] problems);
+
+	/**
+	 * Get a map of database table names to schema versions.
+	 * 
+	 * @return map of database table names to schema versions
+	 */
+	public Map<String, Integer> getSchemaVersions();
+
+	/**
+	 * Destructively anonyize user data.
+	 *
+	 * @param genPasswd password to user for all anonymized user accounts
+	 * @param progressCallback callback to run as accounts are anonymized
+	 * @return list of {@link Anonymization} objects recording details about the
+	 *         anonymization (this data should not be distributed publicly!)
+	 */
+	public List<Anonymization> anonymizeUserData(String genPasswd, Runnable progressCallback);
+
+	/**
+	 * Find all {@link WorkSession}s in given course.
+	 * 
+	 * @param courseId             the course id
+	 * @param separationSeconds    events separated by this much time are considered to be
+	 *                             in separate sessions
+	 * @return list of {@link WorkSession}s
+	 */
+	public List<WorkSession> findWorkSessions(int courseId, int separationSeconds);
+	
+	/**
+	 * Retrieve submissions/snapshots matching given {@link SnapshotSelectionCriteria}.
+	 * 
+	 * @param criteria the {@link SnapshotSelectionCriteria}
+	 * @param callback the {@link SnapshotCallback} which will receive the retrieved
+	 *        snapshots
+	 */
+	public void retrieveSnapshots(SnapshotSelectionCriteria criteria, SnapshotCallback callback);
 }

@@ -1,6 +1,7 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
 // Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2014, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -30,15 +31,10 @@ import com.google.gwt.user.client.ui.ResizeComposite;
  * 
  * @author David Hovemeyer
  */
-public class DevActionsPanel extends ResizeComposite {
-	/**
-	 * 
-	 */
+public class DevActionsPanel extends ResizeComposite implements IDevActionsPanel {
 	private static final double BUTTON_HEIGHT_PX = 32.0;
-	/**
-	 * 
-	 */
 	private static final double BUTTON_WIDTH_PX = 120.0;
+
 	private Runnable submitHandler;
 	private Runnable resetHandler;
 	
@@ -78,20 +74,12 @@ public class DevActionsPanel extends ResizeComposite {
 		initWidget(layoutPanel);
 	}
 	
-	/**
-	 * Set the handler to run when the Submit! button is clicked.
-	 * 
-	 * @param submitHandler handler to run when the Submit! button is clicked
-	 */
+	@Override
 	public void setSubmitHandler(Runnable submitHandler) {
 		this.submitHandler = submitHandler;
 	}
 	
-	/**
-	 * Set the handler to run when the Reset button is clicked.
-	 * 
-	 * @param resetHandler handler to run when the Reset button is clicked
-	 */
+	@Override
 	public void setResetHandler(Runnable resetHandler) {
 		this.resetHandler = resetHandler;
 	}

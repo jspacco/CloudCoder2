@@ -26,7 +26,6 @@ import org.cloudcoder.app.shared.model.SubmissionResult;
 import org.cloudcoder.app.shared.model.TestResult;
 import org.cloudcoder.builder2.model.BuilderSubmission;
 import org.cloudcoder.builder2.model.IBuildStep;
-import org.cloudcoder.builder2.model.InternalBuilderException;
 
 /**
  * Create a {@link SubmissionResult} containing all {@link TestResult}s,
@@ -50,10 +49,7 @@ public class CreateSubmissionResultBuildStep implements IBuildStep {
 		submissionResult.setCompilationResult(compilationResult);
 		
 		// Get the TestResult list
-		TestResult[] testResultList = submission.getArtifact(TestResult[].class);
-		if (testResultList == null) {
-			throw new InternalBuilderException(this.getClass(), "No TestResult list");
-		}
+		TestResult[] testResultList = submission.requireArtifact(this.getClass(), TestResult[].class);
 		submissionResult.setTestResults(testResultList);
 		
 		// Adding the SubmissionResult artifact completes building/testing for this submission

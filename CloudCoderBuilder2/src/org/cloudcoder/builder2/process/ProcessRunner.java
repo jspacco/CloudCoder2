@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2010-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2010-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 // Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,12 +29,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.apache.commons.io.IOUtils;
 import org.cloudcoder.builder2.model.ProcessStatus;
 import org.cloudcoder.builder2.model.WrapperMode;
+import org.cloudcoder.builder2.util.ProcessUtil;
 import org.cloudcoder.builder2.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +65,7 @@ public class ProcessRunner {
 	private IOutputCollector stderrCollector;
 	private InputSender stdinSender;
 	
-	private Map<String,String> env=new HashMap<String,String>();
+	private Map<String,String> env;
 	
 	/**
 	 * Constructor.
@@ -75,10 +75,19 @@ public class ProcessRunner {
 	public ProcessRunner(Properties config) {
 		this.config = config;
 		this.wrapperMode = WrapperMode.SCRIPT;
-	    for (Entry<String,String> entry : System.getenv().entrySet()) {
-	        env.put(entry.getKey(), entry.getValue());
-	    }
+		env = new HashMap<String, String>(System.getenv());
 	    status = ProcessStatus.UNKNOWN;
+	}
+	
+	/**
+	 * Get the map that stores the environment variables to be used
+	 * when the process is run.  This map can be modified in order
+	 * to add, remove, or redefine environment variables.
+	 * 
+	 * @return environment variable map
+	 */
+	public Map<String, String> getEnv() {
+		return env;
 	}
 	
 	/**
@@ -119,29 +128,18 @@ public class ProcessRunner {
 	 * @return enviroment array
 	 */
 	protected String[] getEnvp(String... extraVars) {
-	    String[] envp=new String[env.size() + extraVars.length];
-	    int i=0;
-	    for (Entry<String,String> entry : env.entrySet()) {
-	        envp[i]=entry.getKey()+"="+entry.getValue();
-	        i+=1;
-	    }
-	    for (String s : extraVars) {
-	    	envp[i++] = s;
-	    }
+		String[] curEnvp = ProcessUtil.getEnvArray(env);
+	    String[] envp = new String[curEnvp.length + extraVars.length];
+	    System.arraycopy(curEnvp, 0, envp, 0, curEnvp.length);
+	    System.arraycopy(extraVars, 0, envp, curEnvp.length, extraVars.length);
 	    return envp;
-	}
-	
-	public void addDirToPath(String dir) {
-	    String path=env.get("PATH");
-	    path+=File.separatorChar+dir;
-	    env.put("PATH", path);
 	}
 	
 	public String getStatusMessage() {
 		return statusMessage;
 	}
 	
-	public boolean runSynchronous(File workingDir, String[] command) {
+	public boolean runSynchronous(File workingDir, String... command) {
 		// wrap command (by default, using the runProcess.sh script)
 		command = wrapCommand(command);
 		
@@ -292,7 +290,7 @@ public class ProcessRunner {
 		}
 	}
 
-	public void runAsynchronous(final File workingDir, final String[] command) {
+	public void runAsynchronous(final File workingDir, final String... command) {
 	    exitValueMonitor=new Thread() {
 	        public void run() {
 	            runSynchronous(workingDir, command);

@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,14 +22,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.SubmissionResult;
 import org.cloudcoder.app.shared.model.TestCase;
+import org.cloudcoder.daemon.IOUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,17 +44,70 @@ import org.slf4j.LoggerFactory;
  * @author Jaime Spacco
  */
 public class Builder2Server implements Runnable {
+	/**
+	 * The maximum amount of time that the watchdog thread will
+	 * allow a wait for a problem id or keepalive signal from 
+	 * the webapp.  If the wait becomes longer then we will
+	 * assume that the connection between the builder and
+	 * the webapp has been broken and the watchdog will force
+	 * the server loop to reconnect.
+	 */
+	private static final long MAX_WAIT_MS = 60000L; // after 1 minute of waiting, assume connection is bad
+	
+	/**
+	 * Runnable for watchdog thread.
+	 */
+	private class Watchdog implements Runnable {
+		@Override
+		public void run() {
+			try {
+				while (!shutdownRequested) {
+					Thread.sleep(10000L);
+					
+					// The watchdog should only interfere with the builder
+					// if it is stuck waiting to receive a keepalive signal.
+					if (!waitingForKeepalive) {
+						continue;
+					}
+					
+					long w = waitStart.get();
+					if (w >= 0L) {
+						long waitTime = System.currentTimeMillis() - w;
+						if (waitTime > MAX_WAIT_MS) {
+							// The server loop has waited too long to receive the
+							// problem id / keepalive signal.  Force a reconnect.
+							logger.warn("Watchdog: {} ms without keepalive, forcing reconnect", waitTime);
+							ISocket s = socket;
+							if (s != null) {
+								try {
+									logger.warn("Watchdog: attempting to forcibly close socket...");
+									s.close();
+								} catch (IOException e) {
+									logger.warn("Watchdog: error closing socket", e);
+								}
+							}
+						}
+					}
+				}
+			} catch (InterruptedException e) {
+				logger.info("Watchdog interrupted, shutting down...");
+			}
+		}
+	}
 
     private static final Logger logger=LoggerFactory.getLogger(Builder2Server.class);
 
     private volatile boolean shutdownRequested;
+    private volatile boolean waitingForKeepalive;
     private volatile boolean working;
+    private AtomicLong waitStart;
     private NoConnectTimer noConnectTimer;
     private WebappSocketFactory webappSocketFactory;
     private Builder2 builder2;
-    private Socket socket;
+    private volatile ISocket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+    private Thread watchdogThread;
 
     /**
      * Constructor.
@@ -64,6 +118,9 @@ public class Builder2Server implements Runnable {
      */
     public Builder2Server(WebappSocketFactory webappSocketFactory, Properties config) {
         this.shutdownRequested = false;
+        this.waitingForKeepalive = false;
+        this.working = false;
+        this.waitStart = new AtomicLong(-1L);
         this.noConnectTimer = new NoConnectTimer();
         this.webappSocketFactory = webappSocketFactory;
         this.builder2 = new Builder2(config);
@@ -73,9 +130,15 @@ public class Builder2Server implements Runnable {
      * The main server loop.
      */
     public void run() {
-        while (!shutdownRequested) {
-            runOnce();
-        }
+    	try {
+	    	watchdogThread = new Thread(new Watchdog());
+	    	watchdogThread.start();
+	        while (!shutdownRequested) {
+	            runOnce();
+	        }
+    	} catch (Throwable e) {
+    		logger.error("Fatal exception in Builder2Server thread?", e);
+    	}
     }
 
     /**
@@ -89,40 +152,56 @@ public class Builder2Server implements Runnable {
                 return;
             }
 
-            working = false;
+            // Read a message from the webapp, which will begin
+            // with an Integer problem id.
+            waitingForKeepalive = true;
+            long start = System.currentTimeMillis();
+			waitStart.set(start); // record the start time of the wait
+			//logger.info("Starting wait at {}", start);
             Integer problemId = safeReadObject();
-            working = true;
+            waitStart.set(-1L); // problem id or keepalive signal received, wait finished
+            //logger.info("Received problem id/keepalive from server at {}", System.currentTimeMillis());
+            waitingForKeepalive = false;
 
-            // The CloudCoder app may send us a negative problem id as
-            // a keepalive signal.  We can just ignore these.
+            // The CloudCoder app will send us a negative problem id as
+            // a keepalive signal when there are no submissions that need building/testing.
+            // We can just ignore these.
             if (problemId < 0) {
                 return;
             }
 
-            // The protocol allows the builder to cache Problems and TestCases by their problem id,
-            // but this is a very bad idea, since the Problem and TestCases could change on the
-            // webapp side (for example, if an instructor is editing an exercise).
-            // For this reason, we ALWAYS claim not to have the Problem/TestCases, forcing
-            // the webapp to send the most up to date versions.  It's a small amount
-            // of data, and it's important for correct behavior.
+            try {
+            	// Working on testing a submission: should not be forcibly shut down
+            	working = true;
             
-            // Tell the webapp we don't have this Problem/TestCases
-            out.writeObject(Boolean.FALSE);
-            out.flush();
-
-            // Receive the Problem and TestCases
-            Problem problem = safeReadObject();
-            List<TestCase> testCaseList = safeReadObject();
-
-            // read program text
-            String programText = safeReadObject();
-
-            // Test the submission!
-            SubmissionResult result = builder2.testSubmission(problem, testCaseList, programText);
-
-            // Send the SubmissionResult back to the webapp
-            out.writeObject(result);
-            out.flush();
+	            // The protocol allows the builder to cache Problems and TestCases by their problem id,
+	            // but this is a very bad idea, since the Problem and TestCases could change on the
+	            // webapp side (for example, if an instructor is editing an exercise).
+	            // For this reason, we ALWAYS claim not to have the Problem/TestCases, forcing
+	            // the webapp to send the most up to date versions.  It's a small amount
+	            // of data, and it's important for correct behavior.
+	            
+	            // Tell the webapp we don't have this Problem/TestCases
+	            out.writeObject(Boolean.FALSE);
+	            out.flush();
+	
+	            // Receive the Problem and TestCases
+	            Problem problem = safeReadObject();
+	            List<TestCase> testCaseList = safeReadObject();
+	
+	            // read program text
+	            String programText = safeReadObject();
+	
+	            // Test the submission!
+	            SubmissionResult result = builder2.testSubmission(problem, testCaseList, programText);
+	
+	            // Send the SubmissionResult back to the webapp
+	            out.writeObject(result);
+	            out.flush();
+            } finally {
+            	// No longer working on testing a submission
+            	working = false;
+            }
         } catch (IOException e) {
             // Quite possibly, this is a routine shutdown of the CloudCoder server.
             // We'll try connecting again soon.
@@ -137,7 +216,7 @@ public class Builder2Server implements Runnable {
         }
     }
 
-    private Socket createSecureSocket() throws IOException, GeneralSecurityException {
+    private ISocket createSecureSocket() throws IOException, GeneralSecurityException {
         return webappSocketFactory.connectToWebapp();
     }
 
@@ -153,8 +232,19 @@ public class Builder2Server implements Runnable {
             noConnectTimer.connected();
             this.out = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
+        	// It is possible to get an IOException when creating the ObjectInputStream
+        	// (e.g., if we get an immediate EOF).  Close the socket and its
+        	// input/output streams (if any) and set them to null to inform runOnce() that
+        	// there is no active connection.
+        	IOUtil.closeQuietly(this.socket);
+        	IOUtil.closeQuietly(this.in);
+        	IOUtil.closeQuietly(this.out);
+        	this.socket = null;
+        	this.in = null;
+        	this.out = null;
+        	
             // ClientCoder server may not be running right now...try again soon
-            //logger.error("Cannot connect to CloudCoder server");
+        	logger.info("Failed attempt to connect to server at {}", System.currentTimeMillis());
             noConnectTimer.notConnected(e);
             try {
                 Thread.sleep(5000);
@@ -174,20 +264,32 @@ public class Builder2Server implements Runnable {
     }
 
     public void shutdown() {
-        shutdownRequested = true;
-        if (working) {
-            logger.warn("shutdown(): cannot close worker socket because working=true");
-        } else {
-            try {
-                // Rude, but effective.
-                Socket s = socket;
-                if (s != null) {
-                    s.close();
-                }
-            } catch (IOException e) {
-                logger.error("Unable to close client socket, but Builder is shutting down anyway",e);
-            }
-        }
+    	shutdownRequested = true;
+
+    	// Shut down the watchdog thread
+    	watchdogThread.interrupt();
+    	try {
+    		watchdogThread.join();
+    	} catch (InterruptedException e) {
+    		logger.error("Interrupted waiting for watchdog thread to finish", e);
+    	}
+
+    	// Shut down the server loop
+    	if (working) {
+    		logger.warn("shutdown(): cannot close worker socket because working=true");
+    	} else {
+    		try {
+    			// Close the socket that the server loop is using
+    			// to communicate with the webapp.
+    			// Rude, but effective.
+    			ISocket s = socket;
+    			if (s != null) {
+    				s.close();
+    			}
+    		} catch (IOException e) {
+    			logger.error("Unable to close client socket, but Builder is shutting down anyway",e);
+    		}
+    	}
     }
 
     /**

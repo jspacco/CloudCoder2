@@ -12,10 +12,11 @@ import org.cloudcoder.app.shared.model.TestResult;
 import org.cloudcoder.builder2.model.BuilderSubmission;
 import org.cloudcoder.builder2.model.CommandResult;
 import org.cloudcoder.builder2.model.IBuildStep;
-import org.cloudcoder.builder2.model.InternalBuilderException;
 import org.cloudcoder.builder2.model.ProcessStatus;
 import org.cloudcoder.builder2.util.StringUtil;
 import org.cloudcoder.builder2.util.TestResultUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Check {@link CommandResult}s by checking each line of standard output
@@ -26,26 +27,13 @@ import org.cloudcoder.builder2.util.TestResultUtil;
  * @author David Hovemeyer
  */
 public class CheckCommandResultsUsingRegexBuildStep implements IBuildStep {
+	private static Logger logger = LoggerFactory.getLogger(CheckCommandResultsUsingRegexBuildStep.class);
 
 	@Override
 	public void execute(BuilderSubmission submission, Properties config) {
-		// Get Problem
-		Problem problem = submission.getArtifact(Problem.class);
-		if (problem == null) {
-			throw new InternalBuilderException(this.getClass(), "No Problem");
-		}
-		
-		// Get TestCase list
-		TestCase[] testCaseList = submission.getArtifact(TestCase[].class);
-		if (testCaseList == null) {
-			throw new InternalBuilderException(this.getClass(), "No TestCase list");
-		}
-		
-		// Get CommandResult list
-		CommandResult[] commandResultList = submission.getArtifact(CommandResult[].class);
-		if (commandResultList == null) {
-			throw new InternalBuilderException(this.getClass(), "No CommandResult list");
-		}
+		Problem problem = submission.requireArtifact(this.getClass(), Problem.class);
+		TestCase[] testCaseList = submission.requireArtifact(this.getClass(), TestCase[].class);
+		CommandResult[] commandResultList = submission.requireArtifact(this.getClass(), CommandResult[].class);
 		
 		// Create a TestResult for each TestCase/CommandResult
 		TestResult[] testResultList = new TestResult[testCaseList.length];
@@ -106,15 +94,15 @@ public class CheckCommandResultsUsingRegexBuildStep implements IBuildStep {
 		boolean foundMatchingOutput = false;
 		Pattern pat = Pattern.compile(regex, caseInsensitive ? Pattern.CASE_INSENSITIVE : 0);
 		for (String line : stdoutAsList) {
-			System.out.println("Check: " + line);
+			logger.debug("Check: {}", line);
 			Matcher m = pat.matcher(line);
 			if (m.matches()) {
 				// Match!
-				System.out.println("MATCH");
+				logger.debug("MATCH");
 				foundMatchingOutput = true;
 				break;
 			}
-			System.out.println("Not a match");
+			logger.debug("Not a match");
 		}
 		
 		return foundMatchingOutput

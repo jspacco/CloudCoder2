@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 // Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,9 +27,11 @@ import org.cloudcoder.app.client.view.ButtonPanel;
 import org.cloudcoder.app.client.view.ChoiceDialogBox;
 import org.cloudcoder.app.client.view.CourseAdminProblemListView;
 import org.cloudcoder.app.client.view.IButtonPanelAction;
+import org.cloudcoder.app.client.view.ImportCourseDialogBox;
 import org.cloudcoder.app.client.view.ImportProblemDialog;
 import org.cloudcoder.app.client.view.OkDialogBox;
 import org.cloudcoder.app.client.view.PageNavPanel;
+import org.cloudcoder.app.client.view.SetDatesDialogBox;
 import org.cloudcoder.app.client.view.ShareManyProblemsDialog;
 import org.cloudcoder.app.client.view.ShareProblemDialog;
 import org.cloudcoder.app.client.view.StatusMessageView;
@@ -37,6 +39,7 @@ import org.cloudcoder.app.shared.dto.ShareExerciseStatus;
 import org.cloudcoder.app.shared.dto.ShareExercisesResult;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.Course;
+import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
 import org.cloudcoder.app.shared.model.CourseSelection;
 import org.cloudcoder.app.shared.model.ICallback;
 import org.cloudcoder.app.shared.model.Module;
@@ -56,6 +59,7 @@ import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
@@ -69,6 +73,8 @@ import com.google.gwt.user.client.ui.LayoutPanel;
  * @author Jaime Spacco
  */
 public class ProblemAdminPage extends CloudCoderPage {
+	private static final int IMPORT_PROBLEMS_POLL_INTERVAL_MS = 2000;
+	
 	private enum ProblemAction implements IButtonPanelAction {
 		NEW("New", "Create a new exercise"),
 		EDIT("Edit", "Edit the selected exercise"),
@@ -76,8 +82,10 @@ public class ProblemAdminPage extends CloudCoderPage {
 		STATISTICS("Statistics", "See statistics on selected exercise"),
 		IMPORT("Import", "Import an exercise from the CloudCoder exercise repository"),
 		SHARE("Share", "Shared selected exercise(s) by publishing them to the CloudCoder exercise repository"),
+		IMPORT_COURSE("Import course", "Import all exercises from another course"),
 		MAKE_VISIBLE("Make visible", "Make selected exerise(s) visible to students"),
 		MAKE_INVISIBLE("Make invisible", "Make selected exercise(s) invisible to students"),
+		SET_DATES("Set dates/times", "Configure when selected exercise(s) are assigned and due"),
 		MAKE_PERMISSIVE("Make permissive", "Change license of exercises to a permissive Create Commons license"),
 		QUIZ("Quiz", "Give selected exercise as a quiz");
 		
@@ -99,7 +107,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 		}
 		
 		public boolean isEnabledByDefault() {
-			return this == NEW || this == IMPORT;
+			return this == NEW || this == IMPORT || this == IMPORT_COURSE;
 		}
 	}
 	
@@ -255,9 +263,17 @@ public class ProblemAdminPage extends CloudCoderPage {
 				doImportProblem();
 				break;
 				
+			case IMPORT_COURSE:
+				doImportCourse();
+				break;
+				
 			case MAKE_VISIBLE:
 			case MAKE_INVISIBLE:
 				doChangeVisibility(action == ProblemAction.MAKE_VISIBLE);
+				break;
+				
+			case SET_DATES:
+				doSetDates();
 				break;
 				
 			case MAKE_PERMISSIVE:
@@ -322,6 +338,52 @@ public class ProblemAdminPage extends CloudCoderPage {
                 	}
 				});
             }
+		}
+		
+		private void doSetDates() {
+			final SetDatesDialogBox dialog = new SetDatesDialogBox();
+			
+			Runnable callback = new Runnable() {
+				@Override
+				public void run() {
+					long whenAssigned = dialog.getWhenAssigned();
+					long whenDue = dialog.getWhenDue();
+					Problem[] selected = getSession().get(Problem[].class);
+					//getSession().add(StatusMessage.information("Should be setting dates"));
+					for (Problem problem : selected) {
+						problem.setWhenAssigned(whenAssigned);
+						problem.setWhenDue(whenDue);
+					}
+					doUpdateProblemDates(selected);
+				}
+			};
+			
+			dialog.setOnSetDatesCallback(callback);
+			dialog.center();
+		}
+
+		private void doUpdateProblemDates(final Problem[] selected) {
+			RPC.getCoursesAndProblemsService.updateProblemDates(selected, new AsyncCallback<OperationResult>() {
+				@Override
+				public void onFailure(Throwable caught) {
+					if (caught instanceof CloudCoderAuthenticationException) {
+						recoverFromServerSessionTimeout(new Runnable() {
+							@Override
+							public void run() {
+								doUpdateProblemDates(selected);
+							}
+						});
+					} else {
+						addSessionObject(StatusMessage.error("Could not update exercises", caught));
+					}
+				}
+				
+				@Override
+				public void onSuccess(OperationResult result) {
+					addSessionObject(StatusMessage.fromOperationResult(result));
+					reloadProblems(getCurrentCourse());
+				}
+			});;
 		}
 		
 		private void doShareProblem2() {
@@ -467,6 +529,99 @@ public class ProblemAdminPage extends CloudCoderPage {
 			
 			dialog.center();
 		}
+		
+		private void doImportCourse() {
+			GWT.log("Import all problems from course");
+			
+			// Get all course registrations for user
+			SessionUtil.loadCourseAndCourseRegistrationList(
+					ProblemAdminPage.this,
+					// success callback
+					new ICallback<CourseAndCourseRegistration[]>() {
+						@Override
+						public void call(CourseAndCourseRegistration[] value) {
+							getSession().add(value);
+							
+							// Create dialog
+							final ImportCourseDialogBox dialog = new ImportCourseDialogBox(getSession());
+							dialog.setSelectCourseCallback(new ICallback<CourseAndCourseRegistration>() {
+								@Override
+								public void call(CourseAndCourseRegistration value) {
+									doImportProblemsFromCourse(value, dialog);
+								}
+							});
+							dialog.center();
+						}
+					},
+					// failure callback
+					new ICallback<Pair<String, Throwable>>() {
+						@Override
+						public void call(Pair<String, Throwable> value) {
+							getSession().add(StatusMessage.error(value.getLeft(), value.getRight()));
+						}
+					}
+			);
+		}
+		
+		private void doImportProblemsFromCourse(final CourseAndCourseRegistration source, final ImportCourseDialogBox dialog) {
+			CourseSelection dest = getSession().get(CourseSelection.class);
+			
+			GWT.log("TODO: Import problems from " + source.getCourse().getNameAndTitle());
+			
+			RPC.getCoursesAndProblemsService.startImportAllProblemsFromCourse(source.getCourse(), dest.getCourse(), new AsyncCallback<Void>() {
+				@Override
+				public void onSuccess(Void result) {
+					addSessionObject(StatusMessage.pending("Importing exercises, please wait..."));
+					doCheckImportProblemsFromCourse(dialog);
+				}
+				
+				@Override
+				public void onFailure(Throwable caught) {
+					if (caught instanceof CloudCoderAuthenticationException) {
+						recoverFromServerSessionTimeout(new Runnable() {
+							@Override
+							public void run() {
+								doImportProblemsFromCourse(source, dialog);
+							}
+						});
+					} else {
+						addSessionObject(StatusMessage.error("Error importing exercises", caught));
+						dialog.hide();
+					}
+				}
+			});
+		}
+
+		private void doCheckImportProblemsFromCourse(final ImportCourseDialogBox dialog) {
+			// Poll for completion of importing problems from course
+			new Timer() {
+				@Override
+				public void run() {
+					RPC.getCoursesAndProblemsService.checkImportAllProblemsFromCourse(new AsyncCallback<OperationResult>() {
+						@Override
+						public void onSuccess(OperationResult result) {
+							if (result != null) {
+								// Completed
+								addSessionObject(StatusMessage.fromOperationResult(result));
+								dialog.hide();
+								
+								// Reload problems
+								courseAdminProblemListView.loadProblems(getSession(), getSession().get(CourseSelection.class).getCourse());
+							} else {
+								// No result yet, wait and try again
+								doCheckImportProblemsFromCourse(dialog);
+							}
+						}
+						
+						@Override
+						public void onFailure(Throwable caught) {
+							addSessionObject(StatusMessage.error("Could not import exercises from course", caught));
+							dialog.hide();
+						}
+					});
+				}
+			}.schedule(IMPORT_PROBLEMS_POLL_INTERVAL_MS);
+		}
 
 		private void handleEditProblem() {
 			// Get the full ProblemAndTestCaseList for the chosen Problem
@@ -593,7 +748,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 			
 			// The session should contain a course
 			Course course = getCurrentCourse();
-			courseLabel.setText("Problems in " + course.getName() + " - " + course.getTitle());
+			courseLabel.setText("Problems in " + course.getNameAndTitle());
 		}
 
 		/* (non-Javadoc)

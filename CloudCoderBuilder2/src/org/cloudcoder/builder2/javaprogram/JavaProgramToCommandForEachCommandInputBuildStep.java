@@ -25,6 +25,7 @@ import org.cloudcoder.builder2.model.BuilderSubmission;
 import org.cloudcoder.builder2.model.BytecodeExecutable;
 import org.cloudcoder.builder2.model.Command;
 import org.cloudcoder.builder2.model.CommandInput;
+import org.cloudcoder.builder2.model.ExternalLibrary;
 import org.cloudcoder.builder2.model.IBuildStep;
 import org.cloudcoder.builder2.model.InternalBuilderException;
 
@@ -38,23 +39,29 @@ public class JavaProgramToCommandForEachCommandInputBuildStep implements IBuildS
 
 	@Override
 	public void execute(BuilderSubmission submission, Properties config) {
-		BytecodeExecutable bytecodeExe = submission.getArtifact(BytecodeExecutable.class);
-		if (bytecodeExe == null) {
-			throw new InternalBuilderException(this.getClass(), "No BytecodeExecutable");
-		}
-		
-		CommandInput[] commandInputList = submission.getArtifact(CommandInput[].class);
-		if (commandInputList == null) {
-			throw new InternalBuilderException(this.getClass(), "No CommandInput list");
-		}
+		BytecodeExecutable bytecodeExe = submission.requireArtifact(this.getClass(), BytecodeExecutable.class);
+		CommandInput[] commandInputList = submission.requireArtifact(this.getClass(), CommandInput[].class);
 		
 		Command[] commandList = new Command[commandInputList.length];
+		
+		ExternalLibrary extLib = submission.getArtifact(ExternalLibrary.class);
+		if (extLib != null) {
+			if (!extLib.isAvailable()) {
+				throw new InternalBuilderException(this.getClass(), "Should not happen: external library is not available");
+			}
+		}
 		
 		for (int i = 0; i < commandInputList.length; i++) {
 			List<String> arguments = new ArrayList<String>();
 			arguments.add("java");
 			arguments.add("-classpath");
-			arguments.add(".");
+			// If there is an external library, add it to our runtime classpath
+			if (extLib != null) {
+				arguments.add(".:" + extLib.getFileName());
+			}
+			else {
+				arguments.add(".");
+			}
 			arguments.add(bytecodeExe.getMainClass());
 			commandList[i] = new Command(bytecodeExe.getDir(), arguments);
 		}

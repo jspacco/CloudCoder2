@@ -1,6 +1,7 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
 // Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2014, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -25,8 +26,8 @@ import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.ui.HTML;
-import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.ResizeComposite;
 
@@ -36,27 +37,19 @@ import com.google.gwt.user.client.ui.ResizeComposite;
  * @author David Hovemeyer
  */
 public class ProblemDescriptionView extends ResizeComposite implements SessionObserver, Subscriber {
-	/** The preferred height of the ProblemDescriptionView. */
-	public static final double HEIGHT_PX = 175.0;
+	/** Preferred width of the ProblemDescriptionView. */
+	public static final double DEFAULT_WIDTH_PX = 400.0;
 	
-	private Label problemNameLabel;
 	private HTML problemDescriptionHtml;
 
 	public ProblemDescriptionView() {
 		LayoutPanel layoutPanel = new LayoutPanel();
 		
-		problemNameLabel = new Label("");
-		problemNameLabel.setStyleName("cc-problemName");
-		layoutPanel.add(problemNameLabel);
-		layoutPanel.setWidgetLeftRight(problemNameLabel, 0.0, Unit.PX, 0.0, Unit.PX);
-		layoutPanel.setWidgetTopHeight(problemNameLabel, 0.0, Unit.PX, 24.0, Unit.PX);
-		
 		problemDescriptionHtml = new HTML("", true);
 		layoutPanel.add(problemDescriptionHtml);
-//		problemDescriptionHtml.setWidth("100%");
 		problemDescriptionHtml.setStyleName("cc-problemDescription");
 		layoutPanel.setWidgetLeftRight(problemDescriptionHtml, 0.0, Unit.PX, 0.0, Unit.PX);
-		layoutPanel.setWidgetTopBottom(problemDescriptionHtml, 30.0, Unit.PX, 0.0, Unit.PX);
+		layoutPanel.setWidgetTopBottom(problemDescriptionHtml, 0.0, Unit.PX, 0.0, Unit.PX);
 		
 		initWidget(layoutPanel);
 	}
@@ -78,11 +71,40 @@ public class ProblemDescriptionView extends ResizeComposite implements SessionOb
 	}
 
 	public void displayProblemDescription(Problem problem) {
-		problemNameLabel.setText(problem.getTestname() + " - " + problem.getBriefDescription());
-		
 		// Note: if the problem description contains HTML markup, it will
 		// be rendered.  This is intentional, since it allows a greater degree
 		// of control over formatting that just plain text would allow.
-		problemDescriptionHtml.setHTML(problem.getDescription());
+		StringBuilder buf = new StringBuilder();
+		String description = problem.getDescription();
+		
+		// Add the description as specified in the problem.
+		buf.append(description);
+		
+		// Add author information.
+		buf.append("<div class=\"cc-authorInfo\">Author: <span class=\"cc-authorName\">");
+		String authorName = problem.getAuthorName();
+		String authorWebsite = problem.getAuthorWebsite();
+		if (!authorWebsite.trim().equals("")) {
+			// Format author name as link to author website
+			buf.append("<a href=\"");
+			buf.append(new SafeHtmlBuilder().appendEscaped(authorWebsite).toSafeHtml().asString());
+			buf.append("\">");
+			buf.append(new SafeHtmlBuilder().appendEscaped(authorName).toSafeHtml().asString());
+			buf.append("</a>");
+		} else {
+			// No author website
+			buf.append(new SafeHtmlBuilder().appendEscaped(authorName).toSafeHtml().asString());
+		}
+		// Add license information.
+		buf.append("</span><br>License: <span class=\"cc-problemLicense\"><a href=\"");
+		buf.append(problem.getLicense().getUrl());
+		buf.append("\">");
+		buf.append(problem.getLicense().getName());
+		buf.append("</a></span>");
+		
+		buf.append("</span>");
+		buf.append("</div>");
+		
+		problemDescriptionHtml.setHTML(buf.toString());
 	}
 }

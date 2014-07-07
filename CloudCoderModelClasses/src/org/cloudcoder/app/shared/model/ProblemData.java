@@ -77,9 +77,15 @@ public class ProblemData implements Serializable, IProblemData {
 		public void set(IProblemData obj, String value) { obj.setDescription(value); }
 		public String get(IProblemData obj) { return obj.getDescription(); }
 	};
+	/** {@link ModelObjectField} for description (schema verions 3-6). */
+	public static final ModelObjectField<IProblemData, String> DESCRIPTION_V3_V6 =
+			new ModelObjectField<IProblemData, String>("description", String.class, 16384, ModelObjectIndexType.NONE, ModelObjectField.LITERAL) {
+		public void set(IProblemData obj, String value) { obj.setDescription(value); }
+		public String get(IProblemData obj) { return obj.getDescription(); }
+	};
 	/** {@link ModelObjectField} for description. */
 	public static final ModelObjectField<IProblemData, String> DESCRIPTION =
-			new ModelObjectField<IProblemData, String>("description", String.class, 16384, ModelObjectIndexType.NONE, ModelObjectField.LITERAL) {
+			new ModelObjectField<IProblemData, String>("description", String.class, 131072, ModelObjectIndexType.NONE, ModelObjectField.LITERAL) {
 		public void set(IProblemData obj, String value) { obj.setDescription(value); }
 		public String get(IProblemData obj) { return obj.getDescription(); }
 	};
@@ -184,7 +190,7 @@ public class ProblemData implements Serializable, IProblemData {
 	 * Description of fields (schema version 3).
 	 */
 	public static final ModelObjectSchema<IProblemData> SCHEMA_V3 = ModelObjectSchema.basedOn(SCHEMA_V2)
-		.increaseFieldSize(DESCRIPTION)
+		.increaseFieldSize(DESCRIPTION_V3_V6)
 		.finishDelta();
 	
 	/**
@@ -194,11 +200,31 @@ public class ProblemData implements Serializable, IProblemData {
 		.addAfter(PARENT_HASH, EXTERNAL_LIBRARY_URL)
 		.addAfter(EXTERNAL_LIBRARY_URL, EXTERNAL_LIBRARY_MD5)
 		.finishDelta();
+	
+	/**
+	 * Description of fields (schema version 5).
+	 * Note that we are not actually changing any fields.
+	 * Instead, we are forcing a new schema version because
+	 * the representation of test cases changed in ITestCaseData
+	 * (version 0 to version 1), and this needs to force a new
+	 * schema version for {@link Problem} and {@link RepoProblem}.
+	 */
+	public static final ModelObjectSchema<IProblemData> SCHEMA_V5 = ModelObjectSchema.basedOn(SCHEMA_V4)
+		.finishDelta();
+
+	/**
+	 * Description of fields (schema version 5).
+	 * The size of the description field is increasing from
+	 * 16K to 128K. 
+	 */
+	public static final ModelObjectSchema<IProblemData> SCHEMA_V6 = ModelObjectSchema.basedOn(SCHEMA_V5)
+		.increaseFieldSize(DESCRIPTION)
+		.finishDelta();
 
 	/**
 	 * Description of fields (current schema).
 	 */
-	public static final ModelObjectSchema<IProblemData> SCHEMA = SCHEMA_V4;
+	public static final ModelObjectSchema<IProblemData> SCHEMA = SCHEMA_V6;
 
 	/**
 	 * Constructor.

@@ -21,12 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import org.cloudcoder.builder2.ccompiler.CCompilerBuildStep;
+import org.cloudcoder.builder2.ccompiler.ExecuteCCompilerBuildStep;
 import org.cloudcoder.builder2.model.BuilderSubmission;
 import org.cloudcoder.builder2.model.Command;
 import org.cloudcoder.builder2.model.CommandInput;
 import org.cloudcoder.builder2.model.IBuildStep;
-import org.cloudcoder.builder2.model.InternalBuilderException;
 import org.cloudcoder.builder2.model.NativeExecutable;
 import org.cloudcoder.builder2.util.ArrayUtil;
 import org.slf4j.Logger;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * where the executable file is located.
  * One {@link Command} is created for each {@link CommandInput}.
  * This is useful for executing the executable resulting from
- * the {@link CCompilerBuildStep} if it will be run without
+ * the {@link ExecuteCCompilerBuildStep} if it will be run without
  * arguments with a variety of inputs.  The resulting array of
  * {@link Command} objects is added to the submission as an artifact.
  * 
@@ -50,18 +49,12 @@ public class NativeExecutableToCommandForEachCommandInputBuildStep implements IB
 	
 	@Override
 	public void execute(BuilderSubmission submission, Properties config) {
-		CommandInput[] commandInputList = submission.getArtifact(CommandInput[].class);
-		if (commandInputList == null) {
-			throw new InternalBuilderException(this.getClass(), "No CommandInput list");
-		}
+		CommandInput[] commandInputList = submission.requireArtifact(this.getClass(), CommandInput[].class);
 		
 		List<Command> commandList = new ArrayList<Command>();
 		
 		for (int i = 0; i < commandInputList.length; i++) {
-			NativeExecutable nativeExe = submission.getArtifact(NativeExecutable.class);
-			if (nativeExe == null) {
-				throw new InternalBuilderException(this.getClass(), "No NativeExecutable");
-			}
+			NativeExecutable nativeExe = submission.requireArtifact(this.getClass(), NativeExecutable.class);
 			commandList.add(nativeExe.toCommand());
 		}
 		

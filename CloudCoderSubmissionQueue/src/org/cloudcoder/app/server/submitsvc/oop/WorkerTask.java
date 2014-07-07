@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.IOUtils;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.SubmissionResult;
+import org.cloudcoder.app.shared.model.SubmissionResultAnnotation;
 import org.cloudcoder.app.shared.model.TestCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,9 +43,14 @@ public class WorkerTask implements Runnable {
 	 * Number of milliseconds between attempts to poll the
 	 * submission queue.
 	 */
-	private static final int POLL_INTERVAL_MILLIS = 1000;
+	private static final long POLL_INTERVAL_MILLIS = 1000L;
 
-	private static final long MAX_IDLE_TIME_MILLIS = 5000;
+	/**
+	 * Maximum number of milliseconds that the task is allowed to
+	 * be idle (no submissions available) before a keepalive signal
+	 * is sent to the builder.
+	 */
+	private static final long MAX_IDLE_TIME_MILLIS = 5000L;
 
 	private static Logger logger = LoggerFactory.getLogger(WorkerTask.class);
 	
@@ -195,6 +201,12 @@ public class WorkerTask implements Runnable {
 		
 		// Read list of TestResults
 		SubmissionResult result= (SubmissionResult) in.readObject();
+		
+//		logger.info("Received submission results");
+//		for (SubmissionResultAnnotation annotation : result.getAnnotationList()) {
+//			logger.info("key={}, value={}", annotation.getKey(), annotation.getValue());
+//		}
+		
 		submission.setSubmissionResult(result);
 		submission.setReady();
 	}

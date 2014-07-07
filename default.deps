@@ -1,4 +1,4 @@
-daemon_version=0.6
+daemon_version=0.7
 
 http://mirrors.ibiblio.org/pub/mirrors/maven2/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar
   CloudCoderLogging/lib/jsr305.jar
@@ -26,6 +26,8 @@ http://repo1.maven.org/maven2/org/python/jython-standalone/2.5.3/jython-standalo
 https://s3.amazonaws.com/org.cloudcoder.daemon.binaries/daemon-${daemon_version}.jar
   CloudCoderJetty/lib/daemon/daemon-${daemon_version}.jar
   CloudCoderBuilder2/lib/daemon-${daemon_version}.jar
+  CloudCoderHealthMonitor/lib/daemon-${daemon_version}.jar
+  CloudCoderDataAnalysis/lib/daemon-${daemon_version}.jar
 http://jruby.org.s3.amazonaws.com/downloads/1.7.0/jruby-complete-1.7.0.jar
   CloudCoderBuilder2/lib/jruby-complete-1.7.0.jar
 http://repo1.maven.org/maven2/org/eclipse/jetty/jetty-ajp/7.4.4.v20110707/jetty-ajp-7.4.4.v20110707.jar
@@ -92,9 +94,11 @@ http://json-simple.googlecode.com/files/json-simple-1.1.1.jar
   CloudCoderModelClassesJSON/lib/json-simple-1.1.1.jar
   CloudCoder/war/WEB-INF/lib/json-simple-1.1.1.jar
   CloudCoderRepository/war/WEB-INF/lib/json-simple-1.1.1.jar
+  CloudCoderHealthMonitor/lib/json-simple-1.1.1.jar
 http://repo1.maven.org/maven2/javax/mail/mail/1.4/mail-1.4.jar
   CloudCoderRepository/war/WEB-INF/lib/mail.jar
   CloudCoder/war/WEB-INF/lib/mail.jar
+  CloudCoderHealthMonitor/lib/mail.jar
 http://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.16/mysql-connector-java-5.1.16.jar
   CloudCoderModelClassesPersistence/lib/mysql-connector-java-5.1.16-bin.jar
   CloudCoderRepository/war/WEB-INF/lib/mysql-connector-java-5.1.16-bin.jar
@@ -103,6 +107,7 @@ http://repo1.maven.org/maven2/commons-fileupload/commons-fileupload/1.2.2/common
   CloudCoder/war/WEB-INF/lib/commons-fileupload-1.2.2.jar
 http://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.jar
   CloudCoder/war/WEB-INF/lib/commons-logging-1.1.1.jar
+  CloudCoderHealthMonitor/lib/commons-logging-1.1.1.jar
 http://repo1.maven.org/maven2/dom4j/dom4j/1.6.1/dom4j-1.6.1.jar
   CloudCoderTools/lib/dom4j-1.6.1.jar
   CloudCoder/war/WEB-INF/lib/dom4j-1.6.1.jar
@@ -110,8 +115,10 @@ http://repo1.maven.org/maven2/jaxen/jaxen/1.1.3/jaxen-1.1.3.jar
   CloudCoderTools/lib/jaxen-1.1.3.jar
 http://repo1.maven.org/maven2/org/apache/httpcomponents/httpclient/4.2.1/httpclient-4.2.1.jar
   CloudCoder/war/WEB-INF/lib/httpclient-4.2.1.jar
+  CloudCoderHealthMonitor/lib/httpclient-4.2.1.jar
 http://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.2.1/httpcore-4.2.1.jar
   CloudCoder/war/WEB-INF/lib/httpcore-4.2.1.jar
+  CloudCoderHealthMonitor/lib/httpcore-4.2.1.jar
 http://repo1.maven.org/maven2/net/sf/opencsv/opencsv/2.3/opencsv-2.3.jar
   CloudCoder/war/WEB-INF/lib/opencsv-2.3.jar
 http://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk/1.3.26/aws-java-sdk-1.3.26.jar
@@ -126,6 +133,9 @@ http://repo1.maven.org/maven2/com/mchange/mchange-commons-java/0.2.3.4/mchange-c
   CloudCoderModelClassesPersistence/lib/mchange-commons-java-0.2.3.4.jar
   CloudCoder/war/WEB-INF/lib/mchange-commons-java-0.2.3.4.jar
   CloudCoderRepository/war/WEB-INF/lib/mchange-commons-java-0.2.3.4.jar
+
+https://github.com/tractionsoftware/gwt-traction/releases/download/gwt-traction-1.5.8/gwt-traction-1.5.8.jar
+  CloudCoder/srclib/gwt-traction-1.5.8.jar
 
 #
 # Misc. libs for CloudCoderAnalysis
@@ -168,3 +178,43 @@ ${mirrorServiceEclipse371}/org.eclipse.osgi.util_3.2.200.v20110110.jar
   CloudCoderAnalysis/lib/org.eclipse.osgi.util_3.2.200.v20110110.jar
 ${mirrorServiceEclipse371}/org.eclipse.text_3.5.101.r371_v20110810-0800.jar
   CloudCoderAnalysis/lib/org.eclipse.text_3.5.101.r371_v20110810-0800.jar
+
+#
+# CloudCoderDataAnalysis uses opencsv
+#
+opencsv_version=2.4
+https://opencsv.googlecode.com/files/opencsv-${opencsv_version}.jar
+  CloudCoderDataAnalysis/lib/opencsv-${opencsv_version}.jar
+
+#
+# Jackson (for JSON serialization).
+# Eventually we should stop using JSON-simple.
+#
+
+# Jackson jarfiles
+jackson_version=2.4.1
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/${jackson_version}/jackson-annotations-${jackson_version}.jar
+  CloudCoderModelClassesJSON/lib/jackson-annotations-${jackson_version}.jar
+  CloudCoder/war/WEB-INF/lib/jackson-annotations-${jackson_version}.jar
+  CloudCoderRepository/war/WEB-INF/lib/jackson-annotations-${jackson_version}.jar
+  CloudCoderHealthMonitor/lib/jackson-annotations-${jackson_version}.jar
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/${jackson_version}/jackson-core-${jackson_version}.jar
+  CloudCoderModelClassesJSON/lib/jackson-core-${jackson_version}.jar
+  CloudCoder/war/WEB-INF/lib/jackson-core-${jackson_version}.jar
+  CloudCoderRepository/war/WEB-INF/lib/jackson-core-${jackson_version}.jar
+  CloudCoderHealthMonitor/lib/jackson-core-${jackson_version}.jar
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/${jackson_version}/jackson-databind-${jackson_version}.jar
+  CloudCoderModelClassesJSON/lib/jackson-databind-${jackson_version}.jar
+  CloudCoder/war/WEB-INF/lib/jackson-databind-${jackson_version}.jar
+  CloudCoderRepository/war/WEB-INF/lib/jackson-databind-${jackson_version}.jar
+  CloudCoderHealthMonitor/lib/jackson-databind-${jackson_version}.jar
+
+# Jackson javadoc jarfiles.  We only need one copy of these since all of
+# our Eclipse projects reference Jackson through the CloudCoderModelClassesJSON
+# project via the Eclipse build path.
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/${jackson_version}/jackson-annotations-${jackson_version}-javadoc.jar
+  CloudCoderModelClassesJSON/lib/jackson-annotations-${jackson_version}-javadoc.jar
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/${jackson_version}/jackson-core-${jackson_version}-javadoc.jar
+  CloudCoderModelClassesJSON/lib/jackson-core-${jackson_version}-javadoc.jar
+http://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/${jackson_version}/jackson-databind-${jackson_version}-javadoc.jar
+  CloudCoderModelClassesJSON/lib/jackson-databind-${jackson_version}-javadoc.jar

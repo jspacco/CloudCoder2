@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2013, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2013, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -33,7 +33,6 @@ import org.cloudcoder.app.shared.model.TestCase;
 import org.cloudcoder.app.shared.model.User;
 import org.cloudcoder.app.shared.model.UserAndSubmissionReceipt;
 
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 
@@ -278,4 +277,37 @@ public interface GetCoursesAndProblemsService extends RemoteService {
 	 * @throws CloudCoderAuthenticationException 
 	 */
 	public NamedTestResult[] getTestResultsForSubmission(Problem problem, SubmissionReceipt receipt) throws CloudCoderAuthenticationException;
+
+	/**
+	 * Import all courses from given source {@link Course} into the
+	 * given destination Course.  This method starts the operation:
+	 * the client is expected to use {@link #checkImportAllProblemsFromCourse()}
+	 * to poll for the completion of the operation.
+	 * 
+	 * @param source the source {@link Course}
+	 * @param dest   the destination {@link Course}
+	 * @throws CloudCoderAuthenticationException if the user is not logged in, or if the user is not
+	 *                                           an instructor in both courses
+	 */
+	public void startImportAllProblemsFromCourse(Course source, Course dest) throws CloudCoderAuthenticationException;
+
+	/**
+	 * Check for the result of importing all problems from a source
+	 * {@link Course} to a destination Course, started by a previous
+	 * call to {@link #startImportAllProblemsFromCourse(Course, Course)}.
+	 * 
+	 * @return the {@link OperationResult} indicating the success/failure of the operation,
+	 *         or null if the operation hasn't completed yet
+	 */
+	public OperationResult checkImportAllProblemsFromCourse();
+	
+	/**
+	 * Update the "when assigned" and "when due" dates/times for
+	 * given {@link Problem}s.
+	 * 
+	 * @param problems list of {@link Problem}s whose dates/times should be changed
+	 * @return {@link OperationResult} indicating the success or failure
+	 *         of the operation
+	 */
+	public OperationResult updateProblemDates(Problem[] problems) throws CloudCoderAuthenticationException;
 }

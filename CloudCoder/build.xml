@@ -20,11 +20,15 @@
   	<pathelement location="../CloudCoderModelClassesPersistence/cloudcoderModelClassesPersist.jar"/>
   	<pathelement location="../CloudCoderModelClassesJSON/cloudcoderModelClassesJSON.jar"/>
   	<pathelement location="../CloudCoderSubmissionQueue/cloudcoderSubmissionQueue.jar"/>
+  	<pathelement location="../CloudCoderSubmissionQueueServletContextListener/cloudcoderSubmissionQueueServletContextListener.jar"/>
   	
   	<!-- GWT stuff -->
     <pathelement location="war/WEB-INF/classes"/>
     <pathelement location="${gwt.sdk}/gwt-user.jar"/>
     <fileset dir="${gwt.sdk}" includes="gwt-dev*.jar"/>
+  	
+  	<!-- GWT-traction (http://tractionsoftware.github.io/gwt-traction/) -->
+  	<pathelement location="srclib/gwt-traction-1.5.8.jar"/>
   </path>
 
   <target name="libs" description="Copy libs to WEB-INF/lib">
@@ -54,9 +58,14 @@
   <target name="submissionQueue">
   	<ant inheritall="false" dir="../CloudCoderSubmissionQueue" target="jar"/>
   </target>
+	
+  <!-- Ensure that builder submission queue servlet context listener library is built. -->
+  <target name="submissionQueueServletContextListener">
+  	<ant inheritall="false" dir="../CloudCoderSubmissionQueueServletContextListener" target="jar"/>
+  </target>
 
   <target name="javac"
-  	depends="libs,modelClasses,modelClassesPersist,modelClassesJSON,submissionQueue"
+  	depends="libs,modelClasses,modelClassesPersist,modelClassesJSON,submissionQueue,submissionQueueServletContextListener"
   	description="Compile java source to bytecode">
     <mkdir dir="war/WEB-INF/classes"/>
     <javac srcdir="src" includes="**" encoding="utf-8"
@@ -216,6 +225,14 @@ Test targets suppressed because -junit argument was not specified when running w
 
   <target name="clean" description="Cleans this project">
     <delete dir="war/WEB-INF/classes" failonerror="false" />
+  	<!--
+  		Having the wrong versions of the gwt*.jar files seems to cause
+  		gwtc to fail in mysterious ways.
+  	-->
+  	<delete>
+  		<fileset dir="war/WEB-INF/lib" includes="gwt*.jar"/>
+  	</delete>
+    <delete dir="gwt-unitCache" failonerror="false"/>
     <delete dir="war/cloudcoder" failonerror="false" />
   </target>
 
@@ -223,6 +240,8 @@ Test targets suppressed because -junit argument was not specified when running w
     <ant inheritall="false" dir="../CloudCoderModelClasses" target="clean"/>
     <ant inheritall="false" dir="../CloudCoderModelClassesPersistence" target="clean"/>
     <ant inheritall="false" dir="../CloudCoderModelClassesJSON" target="clean"/>
+    <ant inheritall="false" dir="../CloudCoderModelClassesSubmissionQueue" target="clean"/>
+    <ant inheritall="false" dir="../CloudCoderModelClassesSubmissionQueueServletContextListener" target="clean"/>
   </target>
 
 </project>
