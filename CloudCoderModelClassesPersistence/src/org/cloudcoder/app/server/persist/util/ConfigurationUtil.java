@@ -429,6 +429,7 @@ public class ConfigurationUtil
             }
             if (!usersInCourse.contains(userId)) {
                 registerUser(conn, userId, courseId, CourseRegistrationType.STUDENT, section);
+                numAdded++;
             }
             long register=System.currentTimeMillis()-start;
             logger.info(register+" millis to register "+username);
@@ -462,7 +463,8 @@ public class ConfigurationUtil
         } finally {
             DBUtil.closeQuietly(resultSet);
             DBUtil.closeQuietly(stmt);
-        }    }
+        }
+    }
 
     private static Map<String, User> getAllUsers(Connection conn)
     throws SQLException

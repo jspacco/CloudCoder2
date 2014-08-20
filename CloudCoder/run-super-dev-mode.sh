@@ -68,7 +68,11 @@ srccp1=$(for d in $cc_srcprojs; do echo -n " -src ../${d}/src"; done)
 srccp2=''
 tmpdirs=''
 for j in $cc_srclibs; do
-	td=$(mktemp -d)
+	if [ `uname` = "Darwin" ]; then
+		td=$(mktemp -d cloudcoder.XXXXXXXX)
+	else
+		td=$(mktemp -d)
+	fi
 	mkdir -p $td
 	cat srclib/${j}.jar | (cd $td && jar x)
 	srccp2="$srccp2 -src $td"

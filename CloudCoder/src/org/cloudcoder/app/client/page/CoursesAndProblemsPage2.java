@@ -182,6 +182,9 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			loadProblemButton.addClickHandler(new ClickHandler() {
 				@Override
 				public void onClick(ClickEvent event) {
+				    // TODO: set up callback to call this method when users double-click
+				    // probably need to modify ProblemListView2 to set up a callback to this method somehow
+				    // it will all come back to me!
 					loadProblemButtonClicked();
 				}
 			});
