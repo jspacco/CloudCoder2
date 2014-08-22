@@ -35,19 +35,15 @@ import org.cloudcoder.app.shared.model.Course;
 import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
 import org.cloudcoder.app.shared.model.CourseRegistrationType;
 import org.cloudcoder.app.shared.model.CourseSelection;
-import org.cloudcoder.app.shared.model.Module;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemAndSubmissionReceipt;
 import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
-import com.allen_sauer.gwt.log.client.Log;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Unit;
-import com.google.gwt.event.dom.client.ChangeEvent;
-import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -59,7 +55,6 @@ import com.google.gwt.user.client.ui.InlineHTML;
 import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.LayoutPanel;
-import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.SplitLayoutPanel;
 import com.google.gwt.view.client.SelectionChangeEvent;
 
@@ -217,39 +212,6 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			problemListPanel.setWidgetTopHeight(problemLabel, 0.0, Unit.PX, SectionLabel.HEIGHT_PX, Unit.PX);
 			problemListPanel.setWidgetLeftRight(problemLabel, 0.0, Unit.PX, 0.0, Unit.PX);
 			
-			IsWidget moduleLabel = createSectionLabel("Module Filter:");
-            problemListPanel.add(moduleLabel);
-            problemListPanel.setWidgetTopHeight(moduleLabel, 0.0, Unit.PX, SectionLabel.HEIGHT_PX, Unit.PX);
-            problemListPanel.setWidgetLeftRight(moduleLabel, 90.0, Unit.PX, 90.0, Unit.PX);
-			
-            // TODO: CourseSelection already knows about module; how to use that?
-            loadModules();
-            final ListBox listBox=new ListBox();
-            listBox.addItem("ALL");
-            Module[] modules=getSession().get(Module[].class);
-            if (modules != null) {
-                for (Module m : modules) {
-                    listBox.addItem(m.getName());
-                }
-            }
-			listBox.setVisibleItemCount(1);
-			listBox.setSelectedIndex(0);
-			listBox.addChangeHandler(new ChangeHandler() {
-                @Override
-                public void onChange(ChangeEvent event) {
-                    String selectedText=listBox.getItemText(listBox.getSelectedIndex());
-                    if (selectedText.equals("ALL)")) {
-                        selectedText="";
-                    }
-                    Log.warn("changed selected module to: "+selectedText);
-                    problemListView2.setFilterModule(selectedText);
-                    handleRefreshProblemListButtonClicked();
-                }
-            });
-			problemListPanel.add(listBox);
-			problemListPanel.setWidgetTopHeight(listBox, 0, Unit.PX, COURSE_AND_USER_ADMIN_BUTTON_HEIGHT_PX, Unit.PX);
-            problemListPanel.setWidgetLeftWidth(listBox, 200, Unit.PX, 140, Unit.PX);
-
 			problemListView2 = new ProblemListView2(CoursesAndProblemsPage2.this);
 			problemListPanel.add(problemListView2);
 			problemListPanel.setWidgetTopBottom(problemListView2, SectionLabel.HEIGHT_PX, Unit.PX, 0.0, Unit.PX);
@@ -269,7 +231,6 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			
 			
 			
-
 			centerPanel.add(centerSplit);
 			centerPanel.setWidgetTopBottom(centerSplit, 0.0, Unit.PX, StatusMessageView.HEIGHT_PX, Unit.PX);
 			
@@ -314,39 +275,6 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			getCourseAndCourseRegistrationsRPC(session);
 		}
 		
-		protected void loadModules() {
-            CourseSelection courseSelection=getSession().get(CourseSelection.class);
-            if (courseSelection==null) {
-                Log.debug("Cannot load modules because no course selected");
-                return;
-            }
-            Course course=courseSelection.getCourse();
-            RPC.getCoursesAndProblemsService.getModulesForCourse(course, new AsyncCallback<Module[]>() {
-                @Override
-                public void onSuccess(Module[] result) {
-                    Log.debug(result.length + " module(s) loaded");
-                    addSessionObject(result);
-                }
-
-                @Override
-                public void onFailure(Throwable caught) {
-                    if (caught instanceof CloudCoderAuthenticationException) {
-                        recoverFromServerSessionTimeout(new Runnable() {
-                            @Override
-                            public void run() {
-                                // Try again!
-                                loadModules();
-                            }
-                        });
-                    } else {
-                        GWT.log("Error loading courses", caught);
-                        getSession().add(StatusMessage.error("Error loading courses", caught));
-                    }
-                }
-            });
-		    
-		}
-
 		protected void getCourseAndCourseRegistrationsRPC(final Session session) {
 			RPC.getCoursesAndProblemsService.getCourseAndCourseRegistrations(new AsyncCallback<CourseAndCourseRegistration[]>() {
 				@Override
