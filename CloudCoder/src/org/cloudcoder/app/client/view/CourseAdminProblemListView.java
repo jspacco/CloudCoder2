@@ -299,6 +299,15 @@ public class CourseAdminProblemListView extends ResizeComposite implements Subsc
 	public Problem[] getSelected() {
 		return getProblemsFromProblemAndModule(selectionModel.getSelectedSet());
 	}
+	
+	/**
+	 * Get the currently selected {@link ProblemAndModule}s.
+	 * 
+	 * @return the currently selected {@link ProblemAndModule}s
+	 */
+	public Set<ProblemAndModule> getSelectedProblemAndModel() {
+        return selectionModel.getSelectedSet();
+    }
 
 	/**
 	 * Force {@link Problem}s to be reloaded.

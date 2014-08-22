@@ -18,6 +18,8 @@
 
 package org.cloudcoder.app.client.page;
 
+import java.util.Set;
+
 import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
@@ -26,12 +28,14 @@ import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.client.view.ButtonPanel;
 import org.cloudcoder.app.client.view.ChoiceDialogBox;
 import org.cloudcoder.app.client.view.CourseAdminProblemListView;
+import org.cloudcoder.app.client.view.EditModuleDialogBox;
 import org.cloudcoder.app.client.view.IButtonPanelAction;
 import org.cloudcoder.app.client.view.ImportCourseDialogBox;
 import org.cloudcoder.app.client.view.ImportProblemDialog;
 import org.cloudcoder.app.client.view.OkDialogBox;
 import org.cloudcoder.app.client.view.PageNavPanel;
 import org.cloudcoder.app.client.view.SetDatesDialogBox;
+import org.cloudcoder.app.client.view.SetDatesPanel;
 import org.cloudcoder.app.client.view.ShareManyProblemsDialog;
 import org.cloudcoder.app.client.view.ShareProblemDialog;
 import org.cloudcoder.app.client.view.StatusMessageView;
@@ -59,10 +63,15 @@ import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
+import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 
@@ -87,6 +96,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 		MAKE_INVISIBLE("Make invisible", "Make selected exercise(s) invisible to students"),
 		SET_DATES("Set dates/times", "Configure when selected exercise(s) are assigned and due"),
 		MAKE_PERMISSIVE("Make permissive", "Change license of exercises to a permissive Create Commons license"),
+		EDIT_MODULE("Edit module", "Edit the module(s) for exercises (i.e. basically tag them)"),
 		QUIZ("Quiz", "Give selected exercise as a quiz");
 		
 		private final String name;
@@ -174,6 +184,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 				    case MAKE_INVISIBLE:
                     case SHARE:
                     case MAKE_PERMISSIVE:
+                    case EDIT_MODULE:
 				        return true;
                     case DELETE:
                     case EDIT:
@@ -207,6 +218,17 @@ public class ProblemAdminPage extends CloudCoderPage {
 			});
 			
 			initWidget(dockLayoutPanel);
+		}
+		
+		private void setProblemModuleName(final Set<ProblemAndModule> problemAndModules) {
+		    if (problemAndModules==null) {
+		        GWT.log("No problems selected for module modification");
+		        return;
+		    }
+		    for (ProblemAndModule p : problemAndModules) {
+		        setProblemModuleName(p);
+		    }
+		    reloadProblems(getCurrentCourse());
 		}
 
 		private void setProblemModuleName(final ProblemAndModule value) {
@@ -279,6 +301,10 @@ public class ProblemAdminPage extends CloudCoderPage {
 			case MAKE_PERMISSIVE:
 			    doMakePermissive();
 			    break;
+			    
+			case EDIT_MODULE:
+			    doEditModule();
+			    break;
 				
 			case QUIZ:
 				handleQuiz();
@@ -290,7 +316,7 @@ public class ProblemAdminPage extends CloudCoderPage {
 			Problem[] chosen = getSession().get(Problem[].class);
 			final Course course = getCurrentCourse();
 			
-			getSession().add(StatusMessage.pending("Changing visibility of problem..."));
+			getSession().add(StatusMessage.pending("Changing visibility of problem(s)..."));
 			
 			// Would like to send problems in bulk and fetch test cases server-side
 			for (Problem problem : chosen) {
@@ -385,6 +411,39 @@ public class ProblemAdminPage extends CloudCoderPage {
 				}
 			});;
 		}
+		
+		private void doEditModule() {
+            Set<ProblemAndModule> problemAndModuleSet=courseAdminProblemListView.getSelectedProblemAndModel();
+            EditModuleDialogBox editModuleDialogBox=new EditModuleDialogBox();
+            editModuleDialogBox.setExercise(problemAndModuleSet);
+            editModuleDialogBox.setEditModuleNameCallback(new ICallback<Set<ProblemAndModule>>() {
+                public void call(Set<ProblemAndModule> values) {
+                    setProblemModuleName(values);
+                    
+                }
+            });
+            editModuleDialogBox.setResultCallback(new ICallback<ShareExercisesResult>() {
+                public void call(ShareExercisesResult result) {
+                    // TODO: Handle situation where some, but not all, modules are changed
+                    GWT.log("share problem result: " + result.getStatus() + ":" + result.getMessage());
+
+                    if (result.getStatus()==ShareExerciseStatus.ALL_OK) {
+                        getSession().add(StatusMessage.goodNews(result.getMessage()));
+                    } else {
+                        int numShared=result.getNumSharedSuccessfully();
+                        if (numShared>0) {
+                            getSession().add(StatusMessage.error("Successfuly shared "+numShared+" results before error: "+result.getMessage()));
+                        } else {
+                            getSession().add(StatusMessage.error(result.getMessage()));
+                        }
+                    }
+                    // Reload the problems so that the shared flag is updated
+                    // for the problem the user just shared
+                    reloadProblems(getCurrentCourse());
+                }
+            });
+            editModuleDialogBox.center();
+        }
 		
 		private void doShareProblem2() {
 		    final Problem[] chosen=getSession().get(Problem[].class);

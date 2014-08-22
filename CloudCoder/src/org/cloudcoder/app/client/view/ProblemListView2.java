@@ -19,6 +19,8 @@ package org.cloudcoder.app.client.view;
 
 import java.util.Arrays;
 
+import org.cloudcoder.app.client.model.PageId;
+import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
 import org.cloudcoder.app.client.model.StatusMessage;
 import org.cloudcoder.app.client.page.CloudCoderPage;
@@ -26,6 +28,7 @@ import org.cloudcoder.app.client.page.SessionObserver;
 import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.CourseSelection;
+import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemAndSubmissionReceipt;
 import org.cloudcoder.app.shared.model.SubmissionStatus;
 import org.cloudcoder.app.shared.model.User;
@@ -34,6 +37,8 @@ import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.DoubleClickEvent;
+import com.google.gwt.event.dom.client.DoubleClickHandler;
 import com.google.gwt.user.cellview.client.DataGrid;
 import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -138,7 +143,18 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 				}
 			}
 		});
-		
+		cellTable.addDomHandler(new DoubleClickHandler() {
+            @Override
+            public void onDoubleClick(DoubleClickEvent event) {
+                GWT.log("double clicking: " + session.get(Problem.class));
+                Problem problem = session.get(Problem.class);
+                if (problem != null) {
+                    // Switch to DevelopmentPage
+                    session.get(PageStack.class).push(PageId.DEVELOPMENT);
+                }
+            }
+        }, DoubleClickEvent.getType());
+
 		// If there is already a Course selected, load its problems.
 		// Otherwise, if there are problems already in the session, display them.
 		CourseSelection courseSelection = session.get(CourseSelection.class);
