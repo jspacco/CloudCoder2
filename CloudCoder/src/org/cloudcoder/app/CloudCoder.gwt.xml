@@ -34,6 +34,12 @@
   <source path='client'/>
   <source path='shared'/>
   
+  <!-- Inherit GWT logging -->
+  <!-- <inherits name="com.google.gwt.logging.Logging"/> -->
+  <inherits name="com.allen_sauer.gwt.log.gwt-log-DEBUG" />
+  <!-- TODO setup so that GET parameter turns on logging <set-property name="log_WindowLogger" value="ENABLED" /> -->
+  <set-property name="log_DivLogger" value="DISABLED" />
+
   <!-- Super dev mode -->
    <add-linker name="xsiframe" /> 
    <set-configuration-property name="devModeRedirectEnabled" value="true"/> <!-- FIXME: dangerous for production! -->

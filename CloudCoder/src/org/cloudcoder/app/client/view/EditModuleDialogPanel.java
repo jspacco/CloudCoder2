@@ -53,7 +53,7 @@ public class EditModuleDialogPanel extends Composite
                 "Click the \"Cancel\" button if you do not want to edit the module for these exercises.", true);
         layoutPanel.add(instructionTextLabel);
         layoutPanel.setWidgetLeftRight(instructionTextLabel, 10.0, Unit.PX, 10.0, Unit.PX);
-        layoutPanel.setWidgetTopHeight(instructionTextLabel, 44.0, Unit.PX, 80.0, Unit.PX);
+        layoutPanel.setWidgetTopHeight(instructionTextLabel, 44.0, Unit.PX, 100.0, Unit.PX);
         
         moduleTextBox = new TextBox();
         layoutPanel.add(moduleTextBox);

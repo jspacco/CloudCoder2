@@ -17,7 +17,8 @@
 
 package org.cloudcoder.app.client.view;
 
-import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
@@ -58,7 +59,7 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 	private CloudCoderPage page;
 	private Session session;
 	private DataGrid<ProblemAndSubmissionReceipt> cellTable;
-
+	private String filterModule="";
 	/**
 	 * Constructor.
 	 * 
@@ -206,9 +207,30 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 			}
 		});
 	}
+	
+	/**
+	 * Set the name of the module to filter by. This means that we will only display exercises
+	 * from the given module.
+	 * 
+	 * @param filterModule Module to filter by
+	 */
+	public void setFilterModule(String filterModule) {
+        this.filterModule = filterModule;
+    }
 
-	private void displayLoadedProblems(ProblemAndSubmissionReceipt[] problemList) {
-		GWT.log("Displaying " + problemList.length + " problems/submission receipts");
-		cellTable.setRowData(Arrays.asList(problemList));
+    private void displayLoadedProblems(ProblemAndSubmissionReceipt[] problemList) {
+	    GWT.log("Displaying " + problemList.length + " problems/submission receipts");
+		
+	    GWT.log("After filtering for " +filterModule + " showing "+
+	            problemList.length + " problems/submission receipts");
+		List<ProblemAndSubmissionReceipt> filteredList=new LinkedList<ProblemAndSubmissionReceipt>();
+		for (ProblemAndSubmissionReceipt p : problemList) {
+		    // empty filterModule means that we should show everything
+		    if (filterModule.equals("") || p.getModule().getName().contains(filterModule)) {
+		        filteredList.add(p);
+		    }
+		}
+		cellTable.setRowData(filteredList);
+	    //cellTable.setRowData(Arrays.asList(problemList));
 	}
 }

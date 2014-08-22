@@ -60,6 +60,7 @@ cc_srclibs="gwt-traction-1.5.8"
 bincp1=$(for j in $gwt_libs; do echo -n "${gwt_dir}/gwt-${j}.jar:"; done)
 bincp2=$(for b in $cc_binprojs; do echo -n "../${b}/bin:"; done)
 srccp1=$(for d in $cc_srcprojs; do echo -n " -src ../${d}/src"; done)
+gwtlog=":war/WEB-INF/lib/gwt-log-3.3.0.jar"
 
 # The GWT CodeServer doesn't seem to be able to find sources in
 # a jar file (which is stupid, since gwtc most definitely CAN
@@ -79,7 +80,7 @@ for j in $cc_srclibs; do
 	tmpdirs="$tmpdirs $td"
 done
 
-cmd="java -classpath ${bincp1}${bincp2} -Xmx1024m com.google.gwt.dev.codeserver.CodeServer -src src/ $srccp1 $srccp2 org.cloudcoder.app.CloudCoder"
+cmd="java -classpath ${bincp1}${bincp2}${gwtlog} -Xmx1024m com.google.gwt.dev.codeserver.CodeServer -src src/ $srccp1 $srccp2 org.cloudcoder.app.CloudCoder"
 
 echo "cmd=${cmd}"
 

@@ -17,21 +17,13 @@
 
 package org.cloudcoder.app.client.view;
 
-import java.util.List;
 import java.util.Set;
 
-import org.cloudcoder.app.client.model.StatusMessage;
-import org.cloudcoder.app.client.rpc.RPC;
 import org.cloudcoder.app.shared.dto.ShareExercisesResult;
-import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.ICallback;
-import org.cloudcoder.app.shared.model.Module;
 import org.cloudcoder.app.shared.model.OperationResult;
-import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.app.shared.model.ProblemAndModule;
 
-import com.google.gwt.core.client.GWT;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.DialogBox;
 
 /**
