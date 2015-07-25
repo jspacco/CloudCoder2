@@ -19,7 +19,7 @@ import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.util.Date;
 
-import sun.security.x509.CertAndKeyGen;
+import sun.security.tools.keytool.CertAndKeyGen;
 import sun.security.x509.X500Name;
 
 public class KeystoreUtil
@@ -179,7 +179,7 @@ public class KeystoreUtil
             }
         }
         //CertAndKeyGen keypair = new CertAndKeyGen(keyAlgName, sigAlgName, providerName);
-        CertAndKeyGen keypair = new CertAndKeyGen(keyAlgName, sigAlgName);
+        sun.security.tools.keytool.CertAndKeyGen keypair = new sun.security.tools.keytool.CertAndKeyGen(keyAlgName, sigAlgName);
         // If DN is provided, parse it. Otherwise, prompt the user for it.
         X500Name x500Name= new X500Name(dname);
         keypair.generate(keysize);

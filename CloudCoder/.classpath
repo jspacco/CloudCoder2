@@ -35,7 +35,7 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-fileupload-1.2.2.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/CloudCoderSubmissionQueue"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/CloudCoderLogging"/>
-	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER/gwt-2.6.0"/>
+	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/CloudCoderSubmissionQueueServletContextListener"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/gwt-log-3.3.0.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
