@@ -19,13 +19,14 @@
 	margin-right: 10px;
 	margin-left: 10px;
 }
-.cc-problemName, .cc-courseLabel, .cc-dialogTitle {
+.cc-problemName, .cc-courseLabel, .cc-dialogTitle, .cc-userIdentity {
 	font-weight: bold;
 	font-size: 20px;
 }
 .cc-problemDescription {
 	overflow: auto; /* Allow problem description text to scroll. */
 	background-color: #fffacd;
+	padding: 0px 8px;
 }
 .cc-centered {
 	margin-left: 0 auto;
@@ -106,11 +107,11 @@
  * Styles for the test result outcome column.
  */
 .cc-passedTest {
-	color: green;
+	color: #006400;
 	font-weight: bold;
 }
 .cc-failedTest {
-	color: red;
+	color: #b22222;
 	font-weight: bold;
 }
 
@@ -146,14 +147,14 @@
 	background-color: white;
 }
 .cc-testOutcomeSummaryInnerBackgroundNonEmpty {
-	background-color: red;
+	background-color: #ff2222;
 }
 .cc-testOutcomeSummaryPassedTests {
 	position: absolute;
 	left: 0px;
 	top: 0px;
 	bottom: 0px;
-	background-color: green;
+	background-color: #44dd44;
 }
 
 /* Give the edit problem center scroll panel a distinctive background. */
@@ -226,7 +227,7 @@
 	height: 12px;
 	width: 120px;
 	position: relative;
-	background: red;
+	background: #ff2222;
 	margin: 0px;
 	border: 0px;
 	padding: 0px;
@@ -234,7 +235,7 @@
 .cc-barInner { /* nested inside cc-barInner div to make a green bar: set width to desired percentage */
 	height: 12px;
 	left: 0px;
-	background: green;
+	background: #44dd44;
 	margin: 0px;
 	border: 0px;
 	padding: 0px;
@@ -285,6 +286,33 @@
 	display: inline-block;
 	margin: 10px 10px;
 }
+
+/**
+ * ExerciseSummaryView and ExerciseSummaryItem styles.
+ */
+.cc-exerciseSummary {
+}
+
+/* Basic style for an exercise summary item. */
+.cc-exerciseSummaryItem {
+	width: 24px;
+	height: 24px;
+	display: inline-block;
+	margin: 2px 2px;
+	border: 3px solid transparent;
+}
+
+.cc-exerciseSummaryItem:hover {
+	border: 3px solid black;
+}
+
+/* Styles for exercises summary items: these correspond to SubmissionStatus enumeration members. */
+.cc-exerciseNotStarted { background: gray; }
+.cc-exerciseStarted { background: silver; }
+.cc-exerciseTestsPassed { background: #44dd44; }
+.cc-exerciseCompileError { background: orange; }
+.cc-exerciseBuildError { background: black; }
+.cc-exerciseTestsFailed { background: #ff2222; }
 
 /**
  * Increase the z-index for date box popups so that they

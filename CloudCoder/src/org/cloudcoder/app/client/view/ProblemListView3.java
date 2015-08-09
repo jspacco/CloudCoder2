@@ -19,8 +19,6 @@ package org.cloudcoder.app.client.view;
 
 import java.util.Arrays;
 
-import org.cloudcoder.app.client.model.PageId;
-import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
 import org.cloudcoder.app.client.page.CloudCoderPage;
 import org.cloudcoder.app.client.page.SessionObserver;
@@ -33,9 +31,9 @@ import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
+import com.google.gwt.cell.client.Cell;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.event.dom.client.DoubleClickEvent;
-import com.google.gwt.event.dom.client.DoubleClickHandler;
+import com.google.gwt.user.cellview.client.Column;
 import com.google.gwt.user.cellview.client.DataGrid;
 import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.ui.ResizeComposite;
@@ -46,11 +44,14 @@ import com.google.gwt.view.client.SingleSelectionModel;
  * View for ProblemAndSubmissionReceipts.
  * It serves as a summary of which problems are available in a particular
  * Course. It also displays a status with each problem (whether or not the
- * problem has been started, completed, etc.)
+ * problem has been started, completed, etc.)  This is a simplified
+ * version of the previous view (ProblemListView2) which attempts to
+ * eliminate extraneous details and present the information in
+ * a clearer manner.
  * 
  * @author David Hovemeyer
  */
-public class ProblemListView2 extends ResizeComposite implements SessionObserver, Subscriber {
+public class ProblemListView3 extends ResizeComposite implements SessionObserver, Subscriber {
 	private CloudCoderPage page;
 	private Session session;
 	private DataGrid<ProblemAndSubmissionReceipt> cellTable;
@@ -60,15 +61,13 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 	 * 
 	 * @param page the {@link CloudCoderPage} that will contain this view
 	 */
-	public ProblemListView2(CloudCoderPage page) {
+	public ProblemListView3(CloudCoderPage page) {
 		this.page = page;
 		
 		cellTable = new DataGrid<ProblemAndSubmissionReceipt>();
 		
 		// Configure the DataGrid that will show the problems
 		cellTable.addColumn(new TestNameColumn(), "Name");
-		cellTable.addColumn(new BriefDescriptionColumn(), "Description");
-		cellTable.addColumn(new WhenAssignedColumn(), "Assigned");
 		cellTable.addColumn(new WhenDueColumn(), "Due");
 		cellTable.addColumn(new SubmissionStatusColumn(), "Status");
 		
@@ -81,42 +80,22 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 			return object.getProblem().getTestname();
 		}
 	}
-
-	private static class BriefDescriptionColumn extends TextColumn<ProblemAndSubmissionReceipt> {
-		@Override
-		public String getValue(ProblemAndSubmissionReceipt object) {
-			return object.getProblem().getBriefDescription();
-		}
-	}
-	
-	private static class WhenAssignedColumn extends TextColumn<ProblemAndSubmissionReceipt> {
-		/* (non-Javadoc)
-		 * @see com.google.gwt.user.cellview.client.Column#getValue(java.lang.Object)
-		 */
-		@Override
-		public String getValue(ProblemAndSubmissionReceipt object) {
-			return ViewUtil.formatDate(object.getProblem().getWhenAssignedAsDate());
-		}
-	}
 	
 	private static class WhenDueColumn extends TextColumn<ProblemAndSubmissionReceipt> {
-		/* (non-Javadoc)
-		 * @see com.google.gwt.user.cellview.client.Column#getValue(java.lang.Object)
-		 */
 		@Override
 		public String getValue(ProblemAndSubmissionReceipt object) {
 			return ViewUtil.formatDate(object.getProblem().getWhenDueAsDate());
 		}
 	}
 	
-	private static class SubmissionStatusColumn extends TextColumn<ProblemAndSubmissionReceipt> {
-		/* (non-Javadoc)
-		 * @see com.google.gwt.user.cellview.client.Column#getValue(java.lang.Object)
-		 */
+	private static class SubmissionStatusColumn extends Column<ProblemAndSubmissionReceipt, ProblemAndSubmissionReceipt> {
+		public SubmissionStatusColumn() {
+			super(new BestScoreBarCell<ProblemAndSubmissionReceipt>());
+		}
+
 		@Override
-		public String getValue(ProblemAndSubmissionReceipt object) {
-			SubmissionStatus status = (object.getReceipt() != null) ? object.getReceipt().getStatus() : SubmissionStatus.NOT_STARTED;
-			return status.toString();
+		public ProblemAndSubmissionReceipt getValue(ProblemAndSubmissionReceipt object) {
+			return object;
 		}
 	}
 
@@ -139,18 +118,7 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 				}
 			}
 		});
-		cellTable.addDomHandler(new DoubleClickHandler() {
-            @Override
-            public void onDoubleClick(DoubleClickEvent event) {
-                GWT.log("double clicking: " + session.get(Problem.class));
-                Problem problem = session.get(Problem.class);
-                if (problem != null) {
-                    // Switch to DevelopmentPage
-                    session.get(PageStack.class).push(PageId.DEVELOPMENT);
-                }
-            }
-        }, DoubleClickEvent.getType());
-
+		
 		// If there is already a Course selected, load its problems.
 		// Otherwise, if there are problems already in the session, display them.
 		CourseSelection courseSelection = session.get(CourseSelection.class);
@@ -181,12 +149,18 @@ public class ProblemListView2 extends ResizeComposite implements SessionObserver
 
 	public void loadProblemsForCourse(final CourseSelection courseSelection) {
 		GWT.log("Loading problems and submission receipts for course " + courseSelection.getCourse().getNameAndTitle());
-		SessionUtil.loadProblemAndSubmissionReceiptsInCourse(page, courseSelection.getCourse(), session);
+		SessionUtil.loadProblemAndSubmissionReceiptsInCourse(page, courseSelection, session);
 	}
-	
-    private void displayLoadedProblems(ProblemAndSubmissionReceipt[] problemList) {
-	    GWT.log("Displaying " + problemList.length + " problems/submission receipts");
-	    cellTable.setRowData(Arrays.asList(problemList));
+
+	private void displayLoadedProblems(ProblemAndSubmissionReceipt[] problemList) {
+		GWT.log("Displaying " + problemList.length + " problems/submission receipts");
+		
+		// Sort by due date
+		ProblemAndSubmissionReceipt[] list = new ProblemAndSubmissionReceipt[problemList.length];
+		System.arraycopy(problemList, 0, list, 0, problemList.length);
+		ViewUtil.sortProblemsByDueDate(list);
+		
+		cellTable.setRowData(Arrays.asList(list));
 	}
 
 	private void onProblemSelected(Problem selectedProblem) {

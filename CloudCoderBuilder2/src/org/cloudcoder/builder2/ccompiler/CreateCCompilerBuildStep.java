@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2015, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2015, David H. Hovemeyer <david.hovemeyer@gmail.com>
 // Copyright (C) 2013, York College of Pennsylvania
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@ package org.cloudcoder.builder2.ccompiler;
 import java.io.File;
 import java.util.Properties;
 
+import org.cloudcoder.app.shared.model.Language;
 import org.cloudcoder.app.shared.model.Problem;
 import org.cloudcoder.builder2.model.BuilderSubmission;
 import org.cloudcoder.builder2.model.DeleteDirectoryCleanupAction;
@@ -73,6 +74,21 @@ public class CreateCCompilerBuildStep implements IBuildStep {
 		
 		Compiler compiler = new Compiler(programSource.getProgramText(), tempDir, DEFAULT_PROG_NAME, config);
 		compiler.setLanguage(problem.getProblemType().getLanguage());
+		
+		// Make sure -std=gnu++0x is passed for C++ submissions.
+		if (problem.getProblemType().getLanguage() == Language.CPLUSPLUS) {
+			compiler.addFlag("-std=gnu++0x");
+		}
+		
+		// Make sure -std=gnu99 is passed for C submissions.
+		// You'd think C99 would be the default, considering it's now
+		// 2015, but no.
+		if (problem.getProblemType().getLanguage() == Language.C) {
+			compiler.addFlag("-std=gnu99");
+		}
+		
+		// For both C and C++ submissions, link with -lm
+		compiler.addEndFlag("-lm");
 		
 		submission.addArtifact(compiler);
 	}

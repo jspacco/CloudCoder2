@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
 // Copyright (C) 2011-2012, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2012, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2015, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -32,6 +32,7 @@ import org.cloudcoder.app.shared.model.ProblemAndSubmissionReceipt;
 import org.cloudcoder.app.shared.model.ProblemAndTestCaseList;
 import org.cloudcoder.app.shared.model.TestCase;
 import org.cloudcoder.app.shared.model.User;
+import org.cloudcoder.app.client.page.CloudCoderPage;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -44,13 +45,28 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 public class SessionUtil {
 	/**
 	 * Retrieve list of {@link ProblemAndSubmissionReceipt}s for given {@link Course}.
+	 * This method retrieves problems in all {@link Module}s.
 	 * 
 	 * @param page     the {@link CloudCoderPage} which initiated the loading of problems
 	 * @param course   the {@link Course}
 	 * @param session  the {@link Session}
 	 */
 	public static void loadProblemAndSubmissionReceiptsInCourse(final CloudCoderPage page, final Course course, final Session session) {
-        RPC.getCoursesAndProblemsService.getProblemAndSubscriptionReceipts(course, session.get(User.class), (Module)null, new AsyncCallback<ProblemAndSubmissionReceipt[]>() {
+		loadProblemAndSubmissionReceiptsInCourse(page, new CourseSelection(course, null), session);
+	}
+
+	/**
+	 * Retrieve list of {@link ProblemAndSubmissionReceipt}s for given {@link CourseSelection}.
+	 * 
+	 * @param page             the {@link CloudCoderPage} which initiated the loading of problems
+	 * @param courseSelection  the {@link CourseSelection}
+	 * @param session          the {@link Session}
+	 */
+	public static void loadProblemAndSubmissionReceiptsInCourse(final CloudCoderPage page, final CourseSelection courseSelection, final Session session) {
+		Course course = courseSelection.getCourse();
+		Module module = courseSelection.getModule();
+		GWT.log("RPC to load problems and submission receipts for course " + course.getNameAndTitle());
+		RPC.getCoursesAndProblemsService.getProblemAndSubscriptionReceipts(course, session.get(User.class), module, new AsyncCallback<ProblemAndSubmissionReceipt[]>() {
             @Override
             public void onFailure(Throwable caught) {
             	if (caught instanceof CloudCoderAuthenticationException) {
@@ -58,7 +74,7 @@ public class SessionUtil {
             		page.recoverFromServerSessionTimeout(new Runnable() {
             			public void run() {
             				// Try again!
-            				loadProblemAndSubmissionReceiptsInCourse(page, course, session);
+            				loadProblemAndSubmissionReceiptsInCourse(page, courseSelection, session);
             			}
             		});
             	} else {
@@ -73,7 +89,6 @@ public class SessionUtil {
                 session.add(result);
             }
         });
-		
 	}
 
 	/**
@@ -184,5 +199,68 @@ public class SessionUtil {
 				onSuccess.call(result);
 			}
 		});
+	}
+	
+	public static void getCourseAndCourseRegistrationsRPC(
+			final CloudCoderPage page,
+			final Session session) {
+		RPC.getCoursesAndProblemsService.getCourseAndCourseRegistrations(new AsyncCallback<CourseAndCourseRegistration[]>() {
+			@Override
+			public void onSuccess(CourseAndCourseRegistration[] result) {
+				GWT.log(result.length + " course(s) loaded");
+				page.addSessionObject(result);
+			}
+
+			@Override
+			public void onFailure(Throwable caught) {
+				if (caught instanceof CloudCoderAuthenticationException) {
+					page.recoverFromServerSessionTimeout(new Runnable() {
+						@Override
+						public void run() {
+							// Try again!
+							getCourseAndCourseRegistrationsRPC(page, session);
+						}
+					});
+				} else {
+					GWT.log("Error loading courses", caught);
+					session.add(StatusMessage.error("Error loading courses", caught));
+				}
+			}
+		});
+	}
+
+	/**
+	 * Update (edit) user information, handling a session timeout
+	 * if one has occurred.
+	 * 
+	 * @param page     the {@link CloudCoderPage}
+	 * @param user     the updated {@link User}
+	 * @param session  the {@link Session}
+	 */
+	public static void editUser(final CloudCoderPage page, final User user, final Session session, final Runnable onSuccess) {
+		RPC.usersService.editUser(
+				user,
+				new AsyncCallback<Boolean>() { 
+					@Override
+					public void onSuccess(Boolean result) {
+						session.add(StatusMessage.goodNews("Successfully updated user " + user.getUsername()));
+						onSuccess.run();
+					}
+		
+					@Override
+					public void onFailure(Throwable caught) {
+						if (caught instanceof CloudCoderAuthenticationException) {
+							page.recoverFromServerSessionTimeout(new Runnable() {
+								@Override
+								public void run() {
+									editUser(page, user, session, onSuccess);
+								}
+							});
+						} else {
+							GWT.log("Failed to edit user");
+							session.add(StatusMessage.error("Error updating user " + user.getUsername(), caught));
+						}
+					}
+				});
 	}
 }

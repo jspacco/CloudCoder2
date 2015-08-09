@@ -22,7 +22,7 @@ import org.cloudcoder.app.client.model.PageId;
 import org.cloudcoder.app.client.model.PageStack;
 import org.cloudcoder.app.client.model.Session;
 import org.cloudcoder.app.client.model.StatusMessage;
-import org.cloudcoder.app.client.rpc.RPC;
+import org.cloudcoder.app.client.view.ExerciseSummaryView;
 import org.cloudcoder.app.client.view.PageNavPanel;
 import org.cloudcoder.app.client.view.ProblemDescriptionView;
 import org.cloudcoder.app.client.view.ProblemListView2;
@@ -30,7 +30,6 @@ import org.cloudcoder.app.client.view.ProblemNameAndBriefDescriptionView;
 import org.cloudcoder.app.client.view.SectionLabel;
 import org.cloudcoder.app.client.view.StatusMessageView;
 import org.cloudcoder.app.client.view.TermAndCourseTreeView;
-import org.cloudcoder.app.shared.model.CloudCoderAuthenticationException;
 import org.cloudcoder.app.shared.model.Course;
 import org.cloudcoder.app.shared.model.CourseAndCourseRegistration;
 import org.cloudcoder.app.shared.model.CourseRegistrationType;
@@ -46,7 +45,6 @@ import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
@@ -114,9 +112,11 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 		private Button loadProblemButton;
 		private Button accountButton;
 
+		private ExerciseSummaryView exerciseSummaryView;
+
 		public UI() {
 			DockLayoutPanel dockLayoutPanel = new DockLayoutPanel(Unit.PX);
-
+			
 			//
 			// West panel: has the terms and courses tree view.
 			// Also, displays the Course admin and User admin buttons when
@@ -165,7 +165,18 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
             eastPanel.setWidgetRightWidth(playgroundButton, 0.0, Unit.PX, 120.0, Unit.PX);
             eastPanel.setWidgetTopHeight(playgroundButton, 2*PageNavPanel.HEIGHT_PX, Style.Unit.PX, COURSE_AND_USER_ADMIN_BUTTON_HEIGHT_PX, Unit.PX);
 
-			dockLayoutPanel.addEast(eastPanel, 200);
+            // Put ExerciseSummaryView here, below the Playground Button
+            this.exerciseSummaryView = new ExerciseSummaryView();
+            eastPanel.add(exerciseSummaryView);
+            eastPanel.setWidgetTopBottom(
+            		exerciseSummaryView,
+            		2*PageNavPanel.HEIGHT_PX + COURSE_AND_USER_ADMIN_BUTTON_HEIGHT_PX + 1.0,
+            		Unit.PX,
+            		0.0,
+            		Unit.PX);
+            eastPanel.setWidgetLeftRight(exerciseSummaryView, 0.0, Unit.PX, 0.0, Unit.PX);
+            
+			dockLayoutPanel.addEast(eastPanel, 400);
 
 			//
 			// Center panel: has the problem list view, problem description view,
@@ -267,40 +278,14 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			problemNameAndBriefDescriptionView.activate(session, subscriptionRegistrar);
 			problemDescriptionView.activate(session, subscriptionRegistrar);
 			statusMessageView.activate(session, subscriptionRegistrar);
-
+			exerciseSummaryView.activate(session, subscriptionRegistrar);
 			// register a logout handler
 			this.pageNavPanel.setLogoutHandler(new LogoutHandler(session));
 
 			// Load courses
-			getCourseAndCourseRegistrationsRPC(session);
+			SessionUtil.getCourseAndCourseRegistrationsRPC(CoursesAndProblemsPage2.this, session);
 		}
 		
-		protected void getCourseAndCourseRegistrationsRPC(final Session session) {
-			RPC.getCoursesAndProblemsService.getCourseAndCourseRegistrations(new AsyncCallback<CourseAndCourseRegistration[]>() {
-				@Override
-				public void onSuccess(CourseAndCourseRegistration[] result) {
-					GWT.log(result.length + " course(s) loaded");
-					addSessionObject(result);
-				}
-
-				@Override
-				public void onFailure(Throwable caught) {
-					if (caught instanceof CloudCoderAuthenticationException) {
-						recoverFromServerSessionTimeout(new Runnable() {
-							@Override
-							public void run() {
-								// Try again!
-								getCourseAndCourseRegistrationsRPC(session);
-							}
-						});
-					} else {
-						GWT.log("Error loading courses", caught);
-						session.add(StatusMessage.error("Error loading courses", caught));
-					}
-				}
-			});
-		}
-
 		/* (non-Javadoc)
 		 * @see org.cloudcoder.app.shared.util.Subscriber#eventOccurred(java.lang.Object, org.cloudcoder.app.shared.util.Publisher, java.lang.Object)
 		 */
@@ -421,12 +406,12 @@ public class CoursesAndProblemsPage2 extends CloudCoderPage {
 			}
 		}
 
+
 		protected void handleAccountButtonClicked() {
+			
 			GWT.log("My account button clicked");
-			Course course = getCurrentCourse();
-			if(course != null) {
-				getSession().get(PageStack.class).push(PageId.USER_ACCOUNT);
-			}
+			getSession().get(PageStack.class).push(PageId.USER_ACCOUNT); 
+		
 		}
 		
 		protected void handleRefreshProblemListButtonClicked() {

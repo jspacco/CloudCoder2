@@ -24,6 +24,7 @@ import org.cloudcoder.app.client.model.Session;
 import org.cloudcoder.app.client.model.StatusMessage;
 import org.cloudcoder.app.client.page.CloudCoderPage;
 import org.cloudcoder.app.client.page.CoursesAndProblemsPage2;
+import org.cloudcoder.app.client.page.CoursesAndProblemsPage3;
 import org.cloudcoder.app.client.page.DevelopmentPage;
 import org.cloudcoder.app.client.page.EditProblemPage;
 import org.cloudcoder.app.client.page.InitErrorPage;
@@ -32,7 +33,7 @@ import org.cloudcoder.app.client.page.PlaygroundPage;
 import org.cloudcoder.app.client.page.ProblemAdminPage;
 import org.cloudcoder.app.client.page.QuizPage;
 import org.cloudcoder.app.client.page.StatisticsPage;
-import org.cloudcoder.app.client.page.UserAccountPage;
+import org.cloudcoder.app.client.page.UserAccountPage2;
 import org.cloudcoder.app.client.page.UserAdminPage;
 import org.cloudcoder.app.client.page.UserProblemSubmissionsPage;
 import org.cloudcoder.app.client.page.UserProgressPage;
@@ -47,7 +48,6 @@ import org.cloudcoder.app.shared.util.Publisher;
 import org.cloudcoder.app.shared.util.Subscriber;
 import org.cloudcoder.app.shared.util.SubscriptionRegistrar;
 
-import com.google.gwt.activity.shared.Activity;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style.Unit;
@@ -234,7 +234,7 @@ public class CloudCoder implements EntryPoint, Subscriber {
 		CloudCoderPage page;
 		switch (pageId) {
 		case COURSES_AND_PROBLEMS:
-			page = new CoursesAndProblemsPage2();
+			page = new CoursesAndProblemsPage3();
 			break;
 		case DEVELOPMENT:
 		    page = new DevelopmentPage();
@@ -259,7 +259,7 @@ public class CloudCoder implements EntryPoint, Subscriber {
 			page = new QuizPage();
 			break;
 		case USER_ACCOUNT:
-			page = new UserAccountPage();
+			page = new UserAccountPage2();
 			break;
 		case USER_PROBLEM_SUBMISSIONS:
 			page = new UserProblemSubmissionsPage();

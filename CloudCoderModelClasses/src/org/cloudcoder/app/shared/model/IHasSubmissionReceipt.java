@@ -15,34 +15,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org.cloudcoder.dataanalysis;
+package org.cloudcoder.app.shared.model;
 
-public class Main {
-	public static void main(String[] args) throws Exception {
-		if (args.length == 0) {
-			System.out.println("Command name required");
-			System.exit(1);
-		}
-		
-		String app = args[0];
-		String[] rest = new String[args.length - 1];
-		System.arraycopy(args, 1, rest, 0, args.length - 1);
-		
-		if (app.equals("anonymize")) {
-			Anonymize.main(rest);
-		} else if (app.equals("findWorkSessions")) {
-			FindWorkSessions.main(rest);
-		} else if (app.equals("retest")) {
-			Retest.main(rest);
-		} else if (app.equals("attempts")) {
-			Attempts.main(rest);
-		} else if (app.equals("tts")) {
-			TimeToSolve.main(rest);
-		} else if (app.equals("pauseTimes")) {
-			PauseTimes.main(rest);
-		} else {
-			System.out.println("Unknown app name: " + app);
-			System.exit(1);
-		}
-	}
+import org.cloudcoder.app.shared.model.SubmissionReceipt;
+
+/**
+ * Interface for model classes that either are a {@link SubmissionReceipt}
+ * or contain one.  Since a {@link SubmissionReceipt} represents a user's
+ * score on a {@link Problem}, this interface is useful for generalizing UI
+ * widgets that display a score.
+ * 
+ * @author David Hovemeyer
+ */
+public interface IHasSubmissionReceipt {
+	/**
+	 * Get the {@link SubmissionReceipt}.
+	 * 
+	 * @return the {@link SubmissionReceipt}
+	 */
+	public SubmissionReceipt getReceipt();
 }
