@@ -1,6 +1,6 @@
 // CloudCoder - a web-based pedagogical programming environment
-// Copyright (C) 2011-2014, Jaime Spacco <jspacco@knox.edu>
-// Copyright (C) 2011-2014, David H. Hovemeyer <david.hovemeyer@gmail.com>
+// Copyright (C) 2011-2015, Jaime Spacco <jspacco@knox.edu>
+// Copyright (C) 2011-2015, David H. Hovemeyer <david.hovemeyer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -581,9 +581,15 @@ public class GetCoursesAndProblemsServiceImpl extends RemoteServiceServlet
 		// Make sure user is authenticated
 		User authenticatedUser = ServletUtil.checkClientIsAuthenticated(getThreadLocalRequest(), GetCoursesAndProblemsServiceImpl.class);
 		
-		// Make sure authenticated user is an instructor
+		// Make sure that either
+		//   (1) authenticated user is an instructor, or
+		//   (2) authenticated user is the user whose submission receipts
+		//       are being requested
 		CourseRegistrationList regList = Database.getInstance().findCourseRegistrations(authenticatedUser, problem.getCourseId());
-		if (!regList.isInstructor()) {
+		logger.info("User {} requesting submission receipts for user {}", authenticatedUser.getId(), user.getId());
+		if (!(regList.isInstructor() || authenticatedUser.getId() == user.getId())) {
+			// Authenticated user is not authorized to view submissions for
+			// requested user
 			return new SubmissionReceipt[0];
 		}
 		
